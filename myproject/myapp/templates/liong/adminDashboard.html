@@ -1,0 +1,173 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard</title>
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+
+  <style>
+    /* BODY & BACKGROUND */
+    body {
+      margin: 0;
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #9722be, #1e1e2d);
+      color: #fff;
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* LEFT NAVBAR */
+    .sidebar {
+      width: 220px;
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(12px);
+      display: flex;
+      flex-direction: column;
+      padding: 30px 15px;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+    }
+
+    .sidebar h2 {
+      margin: 0 0 30px;
+      font-size: 22px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .sidebar a {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 15px;
+      margin-bottom: 15px;
+      text-decoration: none;
+      color: #fff;
+      border-radius: 8px;
+      transition: 0.3s;
+      font-weight: 500;
+    }
+
+    .sidebar a:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .sidebar a i {
+      font-size: 18px;
+    }
+
+    /* MAIN CONTENT */
+    .main-content {
+      flex: 1;
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .cards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: flex-start;
+    }
+
+    .card {
+      flex: 1 1 200px;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+      backdrop-filter: blur(10px);
+      min-height: 120px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      transition: transform 0.3s;
+    }
+
+    .card:hover { transform: translateY(-5px); }
+
+    .card i {
+      font-size: 30px;
+      margin-bottom: 10px;
+      color: #ffdd59;
+    }
+
+    .card span {
+      font-size: 16px;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .card-link {
+      display: block;           /* ensures it behaves like a block element */
+      text-decoration: none;    /* removes underline */
+      color: inherit;           /* keeps text color same as card */
+    }
+
+    .card-link .card {
+      margin: 0;                /* remove any extra spacing if needed */
+    }
+
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+      body { flex-direction: column; }
+      .sidebar { width: 100%; flex-direction: row; overflow-x: auto; padding: 15px; }
+      .sidebar a { margin-bottom: 0; margin-right: 10px; white-space: nowrap; }
+      .main-content { padding: 15px; }
+      .cards { justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LEFT NAVBAR -->
+  <div class="sidebar">
+    <h2>Admin Panel</h2>
+    <a href="#"><i class="fa-solid fa-chart-line"></i> Report & Statistics</a>
+    <a href="{% url 'addEmployees' %}"><i class="fa-solid fa-users"></i> Manage Employees</a>
+    <a href="{% url 'requestApproval' %}"><i class="fa-solid fa-envelope"></i> Request</a>
+    <a href="#"><i class="fa-solid fa-bell"></i> Notification</a>
+    <a href="#"><i class="fa-solid fa-gear"></i> Settings</a>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main-content">
+    <h2>Dashboard</h2>
+    <div class="cards">
+      <div class="card">
+        <i class="fa-solid fa-chart-line"></i>
+        <span>Reports</span>
+      </div>
+      <a href="{% url 'addEmployees' %}" class="card-link">
+        <div class="card">
+          <i class="fa-solid fa-users"></i>
+          <span>Manage Employees</span>
+        </div>
+      </a>
+
+      <a href="{% url 'requestApproval' %}" class="card-link">
+      <div class="card">
+        <i class="fa-solid fa-envelope"></i>
+        <span>Requests</span>
+      </div>
+      </a>
+
+      <div class="card">
+        <i class="fa-solid fa-bell"></i>
+        <span>Notifications</span>
+      </div>
+      <div class="card">
+        <i class="fa-solid fa-gear"></i>
+        <span>Settings</span>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>LIONG | Request Supplies</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>Employee Panel</h2>
+        <a href="{% url 'employeeDashboard' %}" class="active"><i class="fa-solid fa-gauge"></i> Dashboard</a>
+        <a href="{% url 'request' %}"><i class="fa-solid fa-cart-shopping"></i> Request Supplies</a>
+        <a href="#"><i class="fa-solid fa-clock-rotate-left"></i> Request History</a>
+        <a href="#"><i class="fa-solid fa-bell"></i> Notifications</a>
+        <a href="#"><i class="fa-solid fa-gear"></i> Settings</a>
+    </div>
+
+    </main>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #9722be, #1e1e2d);
+            color: #fff;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 220px;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            padding: 30px 15px;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+        }
+
+        .sidebar h2 {
+            margin: 0 0 30px;
+            font-size: 22px;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .sidebar a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            text-decoration: none;
+            color: #fff;
+            border-radius: 8px;
+            transition: 0.3s;
+            font-weight: 500;
+        }
+
+        .sidebar a:hover, .sidebar a.active {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .sidebar a i { font-size: 16px; }
+
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            color: #000000;
+        }
+
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            .sidebar { width: 100%; flex-direction: row; overflow-x: auto; padding: 15px; }
+            .sidebar a { margin-bottom: 0; margin-right: 10px; white-space: nowrap; }
+            .main-content { padding: 15px; }
+        }
+        
+        .hidden { display: none; }
+    </style>
+
+</body>
+</html>

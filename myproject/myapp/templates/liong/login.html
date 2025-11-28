@@ -1,0 +1,166 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Super Admin Login</title>
+
+  <link rel="stylesheet" href="{% static 'css/admin-style.css' %}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+
+  <style>
+    body {
+      margin: 0;
+      font-family: "Poppins", sans-serif;
+      background: linear-gradient(135deg, #9722be, #1e1e2d);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      color: #fff;
+    }
+
+    .login-page {
+      display: flex;
+      width: 900px;
+      max-width: 95%;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+    }
+
+    /* LEFT SIDE */
+    .login-left {
+      flex: 1;
+      padding: 40px;
+      border-right: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+
+    .login-left img.brand-logo { width: 120px; margin-bottom: 10px; }
+    .brand-text { font-size: 26px; font-weight: 700; margin-bottom: 10px; }
+    .login-left p { opacity: 0.9; }
+
+    /* RIGHT SIDE */
+    .login-container {
+      flex: 1;
+      padding: 40px;
+    }
+
+    .login-container h2 { margin-bottom: 20px; font-size: 28px; font-weight: 600; }
+
+    .login-container form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .login-container label { font-size: 14px; font-weight: 600; }
+    .login-container input {
+      padding: 10px 12px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      outline: none;
+      width: 92%;
+    }
+
+    .login-container button {
+      margin-top: 10px;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      background: #00c853;
+      color: #fff;
+      transition: 0.3s;
+      font-weight: 600;
+    }
+
+    .login-container button:hover { background: #03b34a; }
+
+    /* MESSAGES */
+    .message {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      padding: 12px 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      opacity: 0;
+      animation: fadeSlide 0.5s forwards;
+    }
+
+    .message.success { background: #d6f5dd; color: #18753c; }
+    .message.error { background: #ffe1e1; color: #b11a1a; }
+
+    @keyframes fadeSlide {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 900px) {
+      .login-page { flex-direction: column; }
+      .login-left { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.2); padding: 25px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="login-page">
+    <div class="login-left">
+      <img src="{% static 'images/logo.png' %}" alt="Logo" class="brand-logo">
+      <div class="brand-text">LIONG GARMENT</div>
+      <p>Welcome back! Please login to your account.</p>
+    </div>
+
+    <div class="login-container">
+      <h2>Login</h2>
+
+      <!-- Messages -->
+      {% if messages %}
+        {% for message in messages %}
+          <div class="message {% if message.tags %}{{ message.tags }}{% endif %}">
+            {% if message.tags == 'error' %}
+              <i class="fa-solid fa-circle-exclamation"></i>
+            {% elif message.tags == 'success' %}
+              <i class="fa-solid fa-circle-check"></i>
+            {% endif %}
+            {{ message }}
+          </div>
+
+          <!-- Redirect only on success -->
+          {% if message.tags == 'success' %}
+            <script>
+              setTimeout(() => {
+                window.location.href = "{% url 'dashboard' %}";
+              }, 1500);
+            </script>
+          {% endif %}
+        {% endfor %}
+      {% endif %}
+
+      <!-- Form -->
+      <form method="POST">
+        {% csrf_token %}
+        <label>Email:</label>
+        <input type="text" name="email" placeholder="Enter email" required>
+
+        <label>Password:</label>
+        <input type="password" name="password" placeholder="Enter password" required>
+
+        <button type="submit">Login</button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>StockSync | Inventory Management</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    <script src="components/navbar.js"></script>
+    <script src="components/footer.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+    <custom-sidebar></custom-sidebar>
+    <div class="ml-60"> <!-- Added margin to account for sidebar -->
+        <custom-navbar></custom-navbar>
+<main class="container mx-auto px-4 py-8">
+        <div class="flex justify-between items-center mb-4">
+            <h1 class="text-3xl font-bold text-gray-800">Inventory Requisitions</h1>
+            <button id="newRequisitionBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+                <i data-feather="plus"></i> New Requisition
+            </button>
+        </div>
+
+        <!-- MOVED: Employee / Requisitions (now on top) -->
+        <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Employee</label>
+                    <select id="filterEmployee" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">All Employees</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
+                    <input id="filterDate" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Search Materials</label>
+                    <div class="relative">
+                        <input id="filterSearch" type="text" placeholder="Search materials..." class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                        <i data-feather="search" class="absolute left-3 top-2.5 text-gray-400"></i>
+                    </div>
+
+                    <!-- Search results displayed below input -->
+                    <div id="searchResults" class="mt-2 max-h-48 overflow-auto hidden border rounded bg-white shadow-sm"></div>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Req. ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Products (qty)</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="requisitionsTbody" class="bg-white divide-y divide-gray-200">
+                        <!-- populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- New Requisition Modal -->
+        <div id="requisitionModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+            <div class="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center border-b p-4">
+                    <h3 class="text-lg font-semibold">New Requisition</h3>
+                    <button id="closeModalBtn" class="text-gray-500 hover:text-gray-700">
+                        <i data-feather="x"></i>
+                    </button>
+                </div>
+                <div class="p-6">
+                    <form id="requisitionForm">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Employee</label>
+                                <select id="modalEmployee" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                                <input id="modalDate" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                            <select id="modalType" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="out">Stock Out (request deduction)</option>
+                                <option value="in">Stock In (add to inventory)</option>
+                            </select>
+                        </div>
+
+                        <div id="itemsWrapper" class="space-y-3 mb-4">
+                            <!-- item rows appended here -->
+                        </div>
+
+                        <div class="flex gap-2 mb-4">
+                            <button type="button" id="addItemBtn" class="px-3 py-2 bg-gray-200 rounded">Add product</button>
+                            <button type="button" id="addManualBtn" class="px-3 py-2 bg-yellow-100 rounded">Add manual product</button>
+                            <button type="button" id="clearItemsBtn" class="px-3 py-2 bg-gray-200 rounded">Clear</button>
+                        </div>
+
+                        <div class="flex justify-end gap-3 border-t pt-4">
+                            <button type="button" id="cancelBtn" class="px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button>
+                            <button type="submit" class="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700">Save Requisition</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <custom-footer></custom-footer>
+    </div> <!-- Closing div for main content area -->
+    <script src="sidebar.js"></script>
+    <script>
+// sample data (replace with server data later)
+        const products = [
+            { id: 1, name: 'Fabric Roll', unit: 'Rolls', stock: 50 },
+            { id: 2, name: 'Thread Cone', unit: 'Cones', stock: 120 },
+            { id: 3, name: 'Buttons Pack', unit: 'Packs', stock: 75 }
+        ];
+        const employees = [
+            { id: 1, name: 'John Doe' },
+            { id: 2, name: 'Jane Smith' },
+            { id: 3, name: 'Robert Johnson' }
+        ];
+
+        // app state
+        let requisitions = []; // { id, employeeId, date, items:[{productId, qty}], type: 'out'|'in', status:'Pending'|'Approved', applied:false }
+        const stockOutTotals = {}; // productId -> totalDeducted
+
+        // DOM refs
+        const filterEmployee = document.getElementById('filterEmployee');
+        const filterSearch = document.getElementById('filterSearch');
+        const filterDate = document.getElementById('filterDate');
+        const requisitionsTbody = document.getElementById('requisitionsTbody');
+        const searchResults = document.getElementById('searchResults');
+
+        // modal refs
+        const modal = document.getElementById('requisitionModal');
+        const newBtn = document.getElementById('newRequisitionBtn');
+        const closeBtn = document.getElementById('closeModalBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const addItemBtn = document.getElementById('addItemBtn');
+        const addManualBtn = document.getElementById('addManualBtn');
+        const clearItemsBtn = document.getElementById('clearItemsBtn');
+        const itemsWrapper = document.getElementById('itemsWrapper');
+        const requisitionForm = document.getElementById('requisitionForm');
+        const modalEmployee = document.getElementById('modalEmployee');
+        const modalType = document.getElementById('modalType');
+        const modalDate = document.getElementById('modalDate');
+
+        // utilities
+        function uid() { return 'REQ-' + (1000 + requisitions.length + 1); }
+        function nextProductId() { return products.length ? Math.max(...products.map(p => p.id)) + 1 : 1; }
+
+        // render inventory cards
+        function renderInventory() {
+            inventoryList.innerHTML = '';
+            products.forEach(p => {
+                const div = document.createElement('div');
+                div.className = 'p-3 border rounded flex justify-between items-center';
+                div.innerHTML = `
+                    <div>
+                        <div class="font-medium">${p.name}</div>
+                        <div class="text-sm text-gray-500">${p.unit}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-xl font-semibold">${p.stock}</div>
+                        <div class="text-sm text-gray-500">In stock</div>
+                    </div>
+                `;
+                inventoryList.appendChild(div);
+            });
+        }
+
+        // render employees in selects
+        function populateEmployees() {
+            [filterEmployee, modalEmployee].forEach(sel => {
+                sel.innerHTML = '<option value="">All Employees</option>';
+                employees.forEach(e => {
+                    const opt = document.createElement('option');
+                    opt.value = e.id;
+                    opt.textContent = e.name;
+                    sel.appendChild(opt);
+                });
+            });
+        }
+
+        // requisitions table render
+        function renderRequisitions() {
+            const search = (filterSearch.value || '').toLowerCase();
+            const empFilter = filterEmployee.value;
+            requisitionsTbody.innerHTML = '';
+            requisitions.forEach(req => {
+                if (empFilter && String(req.employeeId) !== empFilter) return;
+                if (filterDate.value && req.date !== filterDate.value) return;
+                // search in product names
+                if (search) {
+                    const matches = req.items.some(it => {
+                        const prod = products.find(p => p.id === it.productId);
+                        return prod && prod.name.toLowerCase().includes(search);
+                    });
+                    if (!matches) return;
+                }
+
+                const tr = document.createElement('tr');
+                const emp = employees.find(e => e.id === req.employeeId);
+                tr.innerHTML = `
+                    <td class="px-6 py-4 text-sm font-medium text-gray-900">${req.id}</td>
+                    <td class="px-6 py-4 text-sm text-gray-500">${emp ? emp.name : '—'}</td>
+                    <td class="px-6 py-4 text-sm text-gray-500">${req.date}</td>
+                    <td class="px-6 py-4 text-sm text-gray-700">${req.items.map(it => {
+                        const prod = products.find(p => p.id === it.productId);
+                        return `<div>${prod ? prod.name : (it.name || 'Unknown')} (${it.qty})</div>`;
+                    }).join('')}</td>
+                    <td class="px-6 py-4 text-sm">${req.type === 'out' ? '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Stock Out</span>' : '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Stock In</span>'}</td>
+                    <td class="px-6 py-4 text-sm" id="status-${req.id}">${req.status}</td>
+                `;
+                requisitionsTbody.appendChild(tr);
+            });
+            if (window.feather) feather.replace();
+        }
+
+        // make a selectable product row (existing behavior)
+        function makeSelectItemRow(item = {}) {
+            const row = document.createElement('div');
+            row.className = 'grid grid-cols-12 gap-2 items-end';
+            row.innerHTML = `
+                <div class="col-span-6">
+                    <label class="block text-sm text-gray-700 mb-1">Product</label>
+                    <select class="productSelect w-full px-3 py-2 border border-gray-300 rounded-md" data-role="product">
+                        ${products.map(p => `<option value="${p.id}" ${item.productId===p.id?'selected':''}>${p.name}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-sm text-gray-700 mb-1">Unit</label>
+                    <input type="text" class="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-sm" data-role="unit" readonly />
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-sm text-gray-700 mb-1">Qty</label>
+                    <input type="number" min="1" value="${item.qty || 1}" class="w-full px-3 py-2 border border-gray-300 rounded-md" data-role="qty" />
+                </div>
+                <div class="col-span-1">
+                    <label class="block text-sm text-gray-700 mb-1">Left</label>
+                    <div class="px-3 py-2 border border-gray-100 rounded-md bg-gray-50 text-sm" data-role="left">0</div>
+                </div>
+                <div class="col-span-1">
+                    <button type="button" class="removeItemBtn text-red-600" title="Remove"><i data-feather="trash-2"></i></button>
+                </div>
+            `;
+            // set initial unit & left
+            const prodSelect = row.querySelector('[data-role="product"]');
+            const unitInput = row.querySelector('[data-role="unit"]');
+            const leftDiv = row.querySelector('[data-role="left"]');
+            function updateProdInfo() {
+                const p = products.find(x => x.id === Number(prodSelect.value));
+                unitInput.value = p ? p.unit : '';
+                leftDiv.textContent = p ? p.stock : '0';
+                if (window.feather) feather.replace();
+            }
+            prodSelect.addEventListener('change', updateProdInfo);
+            // remove handler
+            row.querySelector('.removeItemBtn').addEventListener('click', () => {
+                row.remove();
+            });
+            updateProdInfo();
+            return row;
+        }
+
+        // make a searchable product row (with autocomplete search)
+        function makeSearchItemRow(item = {}) {
+            const row = document.createElement('div');
+            row.className = 'grid grid-cols-12 gap-2 items-end';
+            row.innerHTML = `
+                <div class="col-span-7 relative">
+                    <label class="block text-sm text-gray-700 mb-1">Product</label>
+                    <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" data-role="productSearch" placeholder="Search & select product..." value="${item.productName || ''}" />
+                    <input type="hidden" data-role="productId" value="${item.productId || ''}" />
+                    <div data-role="productDropdown" class="absolute top-full left-0 right-0 mt-1 max-h-40 overflow-auto hidden border rounded bg-white shadow-md z-10"></div>
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-sm text-gray-700 mb-1">Unit</label>
+                    <input type="text" class="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-sm" data-role="unit" readonly />
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-sm text-gray-700 mb-1">Qty</label>
+                    <input type="number" min="1" value="${item.qty || 1}" class="w-full px-3 py-2 border border-gray-300 rounded-md" data-role="qty" />
+                </div>
+                <div class="col-span-1">
+                    <button type="button" class="removeItemBtn text-red-600" title="Remove"><i data-feather="trash-2"></i></button>
+                </div>
+            `;
+            
+            const searchInput = row.querySelector('[data-role="productSearch"]');
+            const dropdown = row.querySelector('[data-role="productDropdown"]');
+            const productIdInput = row.querySelector('[data-role="productId"]');
+            const unitInput = row.querySelector('[data-role="unit"]');
+            
+            function updateProdInfo(prodId) {
+                const p = products.find(x => x.id === Number(prodId));
+                unitInput.value = p ? p.unit : '';
+                if (window.feather) feather.replace();
+            }
+            
+            function showDropdown(term) {
+                const q = (term || '').toLowerCase();
+                dropdown.innerHTML = '';
+                if (!q) {
+                    dropdown.classList.add('hidden');
+                    return;
+                }
+                const matches = products.filter(p => p.name.toLowerCase().includes(q));
+                if (!matches.length) {
+                    dropdown.innerHTML = `<div class="p-2 text-sm text-gray-500">No products found</div>`;
+                    dropdown.classList.remove('hidden');
+                    return;
+                }
+                matches.forEach(p => {
+                    const optDiv = document.createElement('div');
+                    optDiv.className = 'p-2 hover:bg-blue-50 cursor-pointer text-sm';
+                    optDiv.innerHTML = `<div class="font-medium">${p.name}</div><div class="text-xs text-gray-500">${p.unit}</div>`;
+                    optDiv.addEventListener('click', () => {
+                        searchInput.value = p.name;
+                        productIdInput.value = p.id;
+                        dropdown.classList.add('hidden');
+                        updateProdInfo(p.id);
+                    });
+                    dropdown.appendChild(optDiv);
+                });
+                dropdown.classList.remove('hidden');
+            }
+            
+            searchInput.addEventListener('input', (e) => {
+                showDropdown(e.target.value);
+            });
+            
+            searchInput.addEventListener('blur', () => {
+                setTimeout(() => dropdown.classList.add('hidden'), 100);
+            });
+            
+            searchInput.addEventListener('focus', (e) => {
+                if (e.target.value) showDropdown(e.target.value);
+            });
+            
+            row.querySelector('.removeItemBtn').addEventListener('click', () => {
+                row.remove();
+            });
+            
+            if (item.productId) updateProdInfo(item.productId);
+            if (window.feather) feather.replace();
+            return row;
+        }
+
+        // make a manual product row (text inputs for name/unit)
+        function makeManualItemRow(item = {}) {
+            const row = document.createElement('div');
+            row.className = 'grid grid-cols-12 gap-2 items-end';
+            row.innerHTML = `
+                <div class="col-span-7">
+                    <label class="block text-sm text-gray-700 mb-1">Product (manual)</label>
+                    <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md" data-role="manualName" value="${item.name || ''}" placeholder="Enter product name" />
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-sm text-gray-700 mb-1">Unit</label>
+                    <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md" data-role="manualUnit" value="${item.unit || ''}" placeholder="Unit" />
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-sm text-gray-700 mb-1">Qty</label>
+                    <input type="number" min="1" value="${item.qty || 1}" class="w-full px-3 py-2 border border-gray-300 rounded-md" data-role="qty" />
+                </div>
+                <div class="col-span-1">
+                    <button type="button" class="removeItemBtn text-red-600" title="Remove"><i data-feather="trash-2"></i></button>
+                </div>
+            `;
+            row.querySelector('.removeItemBtn').addEventListener('click', () => row.remove());
+            if (window.feather) feather.replace();
+            return row;
+        }
+
+        // add item row (detect manual flag)
+        function addItemRow(data) {
+            if (data && data.manual) {
+                itemsWrapper.appendChild(makeManualItemRow(data));
+            } else {
+                itemsWrapper.appendChild(makeSearchItemRow(data));
+            }
+            if (window.feather) feather.replace();
+        }
+
+        // clear items
+        function clearItemRows() {
+            itemsWrapper.innerHTML = '';
+        }
+
+        // approve requisition
+        function approveRequisition(id) {
+            const req = requisitions.find(r => r.id === id);
+            if (!req || req.status !== 'Pending') return;
+            // For stock out, deduct stocks
+            if (req.type === 'out') {
+                req.items.forEach(it => {
+                    const p = products.find(x => x.id === it.productId);
+                    if (!p) return;
+                    const deduct = Number(it.qty) || 0;
+                    p.stock = Math.max(0, p.stock - deduct);
+                    stockOutTotals[it.productId] = (stockOutTotals[it.productId] || 0) + deduct;
+                });
+            } else if (req.type === 'in') {
+                // incoming stock increases inventory on approval
+                req.items.forEach(it => {
+                    const p = products.find(x => x.id === it.productId);
+                    if (!p) return;
+                    const add = Number(it.qty) || 0;
+                    p.stock = p.stock + add;
+                });
+            }
+            req.status = 'Approved';
+            renderRequisitions();
+        }
+
+        // delete requisition
+        function deleteRequisition(id) {
+            requisitions = requisitions.filter(r => r.id !== id);
+            renderRequisitions();
+        }
+
+        // search results rendering and handler
+        function renderSearchResults(term) {
+            const q = (term || '').trim().toLowerCase();
+            searchResults.innerHTML = '';
+            if (!q) {
+                searchResults.classList.add('hidden');
+                return;
+            }
+            const matches = products.filter(p => p.name.toLowerCase().includes(q));
+            if (!matches.length) {
+                searchResults.innerHTML = `<div class="p-2 text-sm text-gray-500">No products found</div>`;
+                searchResults.classList.remove('hidden');
+                return;
+            }
+            matches.forEach(p => {
+                const div = document.createElement('div');
+                div.className = 'p-2 hover:bg-gray-50 flex justify-between items-center cursor-pointer';
+                div.innerHTML = `
+                    <div>
+                        <div class="font-medium">${p.name}</div>
+                        <div class="text-xs text-gray-500">${p.unit} — ${p.stock} in stock</div>
+                    </div>
+                `;
+                searchResults.appendChild(div);
+            });
+            searchResults.classList.remove('hidden');
+        }
+
+        // form submit
+        requisitionForm.addEventListener('submit', e => {
+            e.preventDefault();
+            const empId = Number(modalEmployee.value) || null;
+            const date = modalDate.value || new Date().toISOString().slice(0,10);
+            const type = modalType.value;
+            const items = Array.from(itemsWrapper.children).map(row => {
+                const productIdInput = row.querySelector('[data-role="productId"]');
+                const manualName = row.querySelector('[data-role="manualName"]');
+                const qtyInput = row.querySelector('[data-role="qty"]');
+                const qty = Number(qtyInput ? qtyInput.value : 0) || 0;
+                
+                if (manualName) {
+                    return { name: manualName.value.trim(), unit: (row.querySelector('[data-role="manualUnit"]')?.value || '').trim(), qty };
+                } else if (productIdInput && productIdInput.value) {
+                    return { productId: Number(productIdInput.value), qty };
+                }
+                return null;
+            }).filter(it => it && ((it.productId && it.qty>0) || (it.name && it.qty>0)));
+
+            if (!empId || items.length === 0) {
+                alert('Select an employee and at least one product with quantity.');
+                return;
+            }
+
+            // convert manual items into real products (create new product entries)
+            items.forEach(it => {
+                if (!it.productId && it.name) {
+                    const newId = nextProductId();
+                    const newProd = { id: newId, name: it.name, unit: it.unit || '', stock: 0 };
+                    products.push(newProd);
+                    it.productId = newId;
+                    delete it.name;
+                    delete it.unit;
+                }
+            });
+
+            const newReq = {
+                id: uid(),
+                employeeId: empId,
+                date,
+                items,
+                type,
+                status: 'Pending'
+            };
+            requisitions.push(newReq);
+            closeModal();
+            renderRequisitions();
+        });
+
+        // modal open/close
+        function openModal() {
+            modal.classList.remove('hidden');
+            modalDate.value = new Date().toISOString().slice(0,10);
+            clearItemRows();
+            addItemRow();
+        }
+        function closeModal() {
+            modal.classList.add('hidden');
+            requisitionForm.reset();
+            clearItemRows();
+            searchResults.classList.add('hidden');
+        }
+        newBtn && newBtn.addEventListener('click', openModal);
+        closeBtn && closeBtn.addEventListener('click', closeModal);
+        cancelBtn && cancelBtn.addEventListener('click', closeModal);
+        addItemBtn && addItemBtn.addEventListener('click', () => addItemRow());
+        addManualBtn && addManualBtn.addEventListener('click', () => addItemRow({ manual: true }));
+        clearItemsBtn && clearItemsBtn.addEventListener('click', clearItemRows);
+
+        filterSearch.addEventListener('input', e => {
+            renderSearchResults(e.target.value);
+            renderRequisitions();
+        });
+
+        searchResults.addEventListener('click', e => {
+            const btn = e.target.closest('[data-add-id]');
+            if (!btn) return;
+            const pid = Number(btn.getAttribute('data-add-id'));
+            if (modal.classList.contains('hidden')) openModal();
+            addItemRow({ productId: pid, qty: 1 });
+            const lastRow = itemsWrapper.lastElementChild;
+            const sel = lastRow.querySelector('[data-role="product"]');
+            if (sel) {
+                sel.value = pid;
+                sel.dispatchEvent(new Event('change'));
+            }
+            filterSearch.value = '';
+            searchResults.classList.add('hidden');
+        });
+
+        // filters
+        [filterEmployee, document.getElementById('filterSearch'), filterDate].forEach(el => {
+            el && el.addEventListener('input', renderRequisitions);
+        });
+
+        // init
+        populateEmployees();
+        renderRequisitions();
+
+        // initialize feather icons
+        if (window.feather) feather.replace();
+    </script>
+</body>
+</html>

@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>LIONG | Request Supplies</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>Employee Panel</h2>
+        <a href="{% url 'employeeDashboard' %}"><i class="fa-solid fa-gauge"></i> Dashboard</a>
+        <a href="#" class="active"><i class="fa-solid fa-cart-shopping"></i> Request Supplies</a>
+        <a href="#"><i class="fa-solid fa-clock-rotate-left"></i> Request History</a>
+        <a href="#"><i class="fa-solid fa-bell"></i> Notifications</a>
+        <a href="#"><i class="fa-solid fa-gear"></i> Settings</a>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Request Supplies</h1>
+            <div class="text-sm text-gray-600 bg-white px-3 py-1 rounded-lg border">
+                <i class="fas fa-user mr-1"></i>
+                {{ current_user.name }}
+            </div>
+        </div>
+
+        <!-- Django Messages -->
+        {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+            <div class="p-4 rounded-lg {% if message.tags == 'success' %}bg-green-100 text-green-800 border border-green-200{% elif message.tags == 'error' %}bg-red-100 text-red-800 border border-red-200{% else %}bg-blue-100 text-blue-800 border border-blue-200{% endif %}">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <i class="fas {% if message.tags == 'success' %}fa-check-circle{% elif message.tags == 'error' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %} mr-2"></i>
+                        {{ message }}
+                    </div>
+                    <button onclick="this.parentElement.parentElement.style.display='none'" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Request Form -->
+        <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">New Requisition Request</h2>
+            
+            <form method="POST" id="requisitionForm">
+                {% csrf_token %}
+                
+                <!-- Products Selection -->
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-lg font-medium text-gray-700">Select Products</h3>
+                    </div>
+                    
+                    <!-- Search Bar -->
+                    <div class="mb-4">
+                        <div class="relative">
+                            <input type="text" id="productSearch" 
+                                   class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                                   placeholder="Search products...">
+                            <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- Products List -->
+                    <div class="space-y-4 max-h-96 overflow-y-auto p-2 border border-gray-200 rounded-lg" id="productsContainer">
+                        {% for product in products %}
+                        <div class="product-item flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                            <div class="flex items-center space-x-4">
+                                <input type="checkbox" name="product_id[]" value="{{ product.product_id }}" 
+                                       class="product-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500">
+                                <div>
+                                    <span class="font-medium text-gray-800 product-name">{{ product.name }}</span>
+                                    <span class="text-sm text-gray-500 ml-2">({{ product.unit }})</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <label class="text-sm text-gray-600">Quantity:</label>
+                                <input type="number" name="quantity[]" min="1" value="1" 
+                                       class="quantity-input w-20 px-2 py-1 border border-gray-300 rounded text-sm" 
+                                       disabled>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="text-center py-4 text-gray-500">
+                            <i class="fas fa-box-open text-3xl mb-2"></i>
+                            <p>No products available</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Remarks -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-comment mr-1"></i>Remarks (Optional)
+                    </label>
+                    <textarea name="remarks" rows="3" 
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                              placeholder="Add any additional notes or special requests..."></textarea>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="flex justify-end">
+                    <button type="submit" 
+                            class="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition duration-200 flex items-center">
+                        <i class="fas fa-paper-plane mr-2"></i>Submit Request
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Request History -->
+        <div class="bg-white rounded-xl shadow-md p-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">My Request History</h2>
+            
+            {% if requisitions %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Req. ID</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Products</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for req in requisitions %}
+                        <tr class="hover:bg-gray-50 transition-colors">
+                            <td class="px-4 py-4 text-sm font-medium text-gray-900">#{{ req.requisition_id }}</td>
+                            <td class="px-4 py-4 text-sm text-gray-500">
+                                {{ req.date_requested|date:"M d, Y" }}<br>
+                                <span class="text-xs text-gray-400">{{ req.date_requested|date:"H:i A" }}</span>
+                            </td>
+                            <td class="px-4 py-4 text-sm text-gray-700">
+                                <div class="space-y-1">
+                                    {% for item in req.requisition_item_set.all %}
+                                    <div class="flex justify-between text-xs">
+                                        <span>{{ item.product.name }}</span>
+                                        <span class="text-gray-500">{{ item.quantity }} {{ item.product.unit }}</span>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                            <td class="px-4 py-4 text-sm">
+                                <span class="px-3 py-1 rounded-full text-xs font-medium 
+                                    {% if req.status == 'Pending' %}bg-yellow-100 text-yellow-800 border border-yellow-200
+                                    {% elif req.status == 'Approved_Dep' %}bg-green-100 text-green-800 border border-green-200
+                                    {% elif req.status == 'Denied' %}bg-red-100 text-red-800 border border-red-200
+                                    {% elif req.status == 'Forwarded_Inv' %}bg-blue-100 text-blue-800 border border-blue-200
+                                    {% else %}bg-gray-100 text-gray-800 border border-gray-200{% endif %}">
+                                    <i class="fas 
+                                        {% if req.status == 'Pending' %}fa-clock
+                                        {% elif req.status == 'Approved_Dep' %}fa-check-circle
+                                        {% elif req.status == 'Denied' %}fa-times-circle
+                                        {% elif req.status == 'Forwarded_Inv' %}fa-share-square
+                                        {% else %}fa-question-circle{% endif %} mr-1"></i>
+                                    {{ req.status }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-4 text-sm text-gray-600">
+                                {{ req.remarks|default:"-"|truncatewords:10 }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-8">
+                <i class="fas fa-clipboard-list text-4xl text-gray-300 mb-4"></i>
+                <p class="text-gray-500 text-lg">No requests yet</p>
+                <p class="text-gray-400 text-sm mt-2">Submit your first supply request above.</p>
+            </div>
+            {% endif %}
+        </div>
+
+    </main>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #9722be, #1e1e2d);
+            color: #fff;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 220px;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            padding: 30px 15px;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+        }
+
+        .sidebar h2 {
+            margin: 0 0 30px;
+            font-size: 22px;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .sidebar a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            text-decoration: none;
+            color: #fff;
+            border-radius: 8px;
+            transition: 0.3s;
+            font-weight: 500;
+        }
+
+        .sidebar a:hover, .sidebar a.active {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .sidebar a i { font-size: 16px; }
+
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            color: #000000;
+        }
+
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            .sidebar { width: 100%; flex-direction: row; overflow-x: auto; padding: 15px; }
+            .sidebar a { margin-bottom: 0; margin-right: 10px; white-space: nowrap; }
+            .main-content { padding: 15px; }
+        }
+        
+        .hidden { display: none; }
+    </style>
+
+    <script>
+        // Enable quantity inputs when products are selected
+        document.addEventListener('DOMContentLoaded', function() {
+            const checkboxes = document.querySelectorAll('.product-checkbox');
+            const quantityInputs = document.querySelectorAll('.quantity-input');
+            const productSearch = document.getElementById('productSearch');
+            const productsContainer = document.getElementById('productsContainer');
+            const addNewProductBtn = document.getElementById('addNewProductBtn');
+            const newProductSection = document.getElementById('newProductSection');
+            const cancelNewProduct = document.getElementById('cancelNewProduct');
+            const addProductToList = document.getElementById('addProductToList');
+            
+            let newProductCounter = 0;
+            
+            // Toggle quantity inputs when products are selected
+            checkboxes.forEach((checkbox, index) => {
+                checkbox.addEventListener('change', function() {
+                    quantityInputs[index].disabled = !this.checked;
+                    if (!this.checked) {
+                        quantityInputs[index].value = '1';
+                    }
+                });
+            });
+
+            // Search functionality
+            productSearch.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                const productItems = document.querySelectorAll('.product-item');
+                
+                productItems.forEach(item => {
+                    const productName = item.querySelector('.product-name').textContent.toLowerCase();
+                    if (productName.includes(searchTerm)) {
+                        item.style.display = 'flex';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+
+            // Show new product form
+            addNewProductBtn.addEventListener('click', function() {
+                newProductSection.classList.remove('hidden');
+                this.style.display = 'none';
+            });
+
+            // Hide new product form
+            cancelNewProduct.addEventListener('click', function() {
+                newProductSection.classList.add('hidden');
+                addNewProductBtn.style.display = 'block';
+                // Clear form
+                document.querySelector('input[name="new_product_name"]').value = '';
+                document.querySelector('select[name="new_product_unit"]').value = 'piece';
+                document.querySelector('input[name="new_product_quantity"]').value = '1';
+            });
+
+
+            // Form validation
+            document.getElementById('requisitionForm').addEventListener('submit', function(e) {
+                const checkedProducts = document.querySelectorAll('.product-checkbox:checked');
+                if (checkedProducts.length === 0) {
+                    e.preventDefault();
+                    alert('Please select at least one product.');
+                    return false;
+                }
+                
+                let hasValidQuantity = true;
+                checkedProducts.forEach((checkbox) => {
+                    const quantityInput = checkbox.closest('.flex').querySelector('.quantity-input');
+                    if (!quantityInput || !quantityInput.value || quantityInput.value <= 0) {
+                        hasValidQuantity = false;
+                        quantityInput.style.borderColor = 'red';
+                    } else {
+                        quantityInput.style.borderColor = '';
+                    }
+                });
+                
+                if (!hasValidQuantity) {
+                    e.preventDefault();
+                    alert('Please enter valid quantities for all selected products.');
+                    return false;
+                }
+            });
+        });
+    </script>
+</body>
+</html>

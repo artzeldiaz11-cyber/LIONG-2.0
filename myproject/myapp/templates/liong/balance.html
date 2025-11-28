@@ -1,0 +1,230 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Inventory Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+</head>
+<body class="bg-gray-50">
+
+    <!-- Sidebar -->
+    <inventory-sidebar></inventory-sidebar>
+
+    <!-- Main content -->
+    <main class="ml-[250px] p-6">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800">Inventory Balance</h1>
+                <p class="text-gray-600 mt-1">Current stock levels and procurement insights</p>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="bg-white rounded-lg shadow-sm border px-4 py-2">
+                    <span class="text-sm text-gray-500">Total Products:</span>
+                    <span class="font-semibold ml-2">{{ balances|length }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white rounded-xl shadow-sm border p-4">
+                <div class="flex items-center">
+                    <div class="p-2 bg-blue-100 rounded-lg">
+                        <i data-feather="package" class="w-5 h-5 text-blue-600"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-gray-600">Low Stock Items</p>
+                        <p class="text-xl font-bold text-gray-800">
+                            {% with low_stock=balances|length %}{{ low_stock }}{% endwith %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border p-4">
+                <div class="flex items-center">
+                    <div class="p-2 bg-green-100 rounded-lg">
+                        <i data-feather="trending-up" class="w-5 h-5 text-green-600"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-gray-600">In Stock Items</p>
+                        <p class="text-xl font-bold text-gray-800">
+                            {% with in_stock=balances|length %}{{ in_stock }}{% endwith %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border p-4">
+                <div class="flex items-center">
+                    <div class="p-2 bg-orange-100 rounded-lg">
+                        <i data-feather="alert-triangle" class="w-5 h-5 text-orange-600"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-gray-600">Need Reorder</p>
+                        <p class="text-xl font-bold text-gray-800">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border p-4">
+                <div class="flex items-center">
+                    <div class="p-2 bg-purple-100 rounded-lg">
+                        <i data-feather="refresh-cw" class="w-5 h-5 text-purple-600"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-gray-600">Last Updated</p>
+                        <p class="text-sm font-bold text-gray-800">Just now</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table Container -->
+        <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+            <!-- Table Header -->
+            <div class="px-6 py-4 border-b bg-gray-50">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-lg font-semibold text-gray-800">Product Inventory</h2>
+                    <div class="flex space-x-3">
+                        <div class="relative">
+                            <input type="text" placeholder="Search products..." 
+                                   class="pl-10 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <i data-feather="search" class="absolute left-3 top-2.5 w-4 h-4 text-gray-400"></i>
+                        </div>
+                        <button class="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                            <i data-feather="download" class="w-4 h-4 mr-2"></i>
+                            Export
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                <div class="flex items-center">
+                                    <span>Product</span>
+                                    <i data-feather="chevron-down" class="w-4 h-4 ml-1 text-gray-400"></i>
+                                </div>
+                            </th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Unit</th>
+                            <th class="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Opening</th>
+                            <th class="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Units</th>
+                            <th class="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Meters</th>
+                            <th class="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Kilograms</th>
+                            <th class="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Min Stock</th>
+                            <th class="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Procurement</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Last Updated</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        {% for balance in balances %}
+                        <tr class="hover:bg-gray-50 transition duration-150">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                        <i data-feather="package" class="w-4 h-4 text-blue-600"></i>
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900">{{ balance.product.item_name }}</div>
+                                        <div class="text-sm text-gray-500">ID: {{ balance.product.product_id }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    {{ balance.unit }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
+                                {{ balance.opening_inventory }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium 
+                                {% if balance.quantity_unit < balance.min_stock %}text-red-600
+                                {% else %}text-gray-900{% endif %}">
+                                {{ balance.quantity_unit }}
+                                {% if balance.quantity_unit < balance.min_stock %}
+                                <i data-feather="alert-triangle" class="w-4 h-4 inline ml-1 text-red-500"></i>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
+                                {{ balance.quantity_meters|default:"-" }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
+                                {{ balance.quantity_klg|default:"-" }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
+                                {{ balance.min_stock }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right">
+                                {% if balance.procurement_suggestion and balance.procurement_suggestion > 0 %}
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                    <i data-feather="shopping-cart" class="w-3 h-3 mr-1"></i>
+                                    {{ balance.procurement_suggestion }}
+                                </span>
+                                {% else %}
+                                <span class="text-xs text-gray-500">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ balance.last_updated|date:"M d, Y H:i" }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" class="px-6 py-12 text-center">
+                                <div class="flex flex-col items-center justify-center">
+                                    <i data-feather="inbox" class="w-12 h-12 text-gray-400 mb-3"></i>
+                                    <h3 class="text-lg font-medium text-gray-900 mb-1">No inventory data</h3>
+                                    <p class="text-gray-500">Get started by adding products to your inventory.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Table Footer -->
+            <div class="px-6 py-4 border-t bg-gray-50">
+                <div class="flex justify-between items-center">
+                    <div class="text-sm text-gray-700">
+                        Showing <span class="font-medium">{{ balances|length }}</span> of <span class="font-medium">{{ balances|length }}</span> products
+                    </div>
+                    <div class="flex space-x-2">
+                        <button class="px-3 py-1 border rounded-lg text-sm hover:bg-gray-100">Previous</button>
+                        <button class="px-3 py-1 border rounded-lg text-sm bg-blue-600 text-white">1</button>
+                        <button class="px-3 py-1 border rounded-lg text-sm hover:bg-gray-100">Next</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Initialize feather icons
+        feather.replace();
+        
+        // Add some interactivity
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add row click functionality
+            const rows = document.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                row.addEventListener('click', function() {
+                    // Remove previous selections
+                    rows.forEach(r => r.classList.remove('bg-blue-50'));
+                    // Add selection to current row
+                    this.classList.add('bg-blue-50');
+                });
+            });
+        });
+    </script>
+
+    <!-- Inventory JS (includes InventorySidebar component) -->
+    <script src="{% static 'js/inventory_dashboard.js' %}"></script>
+</body>
+</html>
