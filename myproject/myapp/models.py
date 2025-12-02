@@ -58,17 +58,29 @@ class Products(models.Model):
 
 
 class Requisition(models.Model):
+
     STATUS_CHOICES = [
-        ('Pending', 'Pending'),
-        ('Approved_Dep', 'Approved_Dep'),
+        ('Pending Approval', 'Pending Approval'),
+        ('Approved', 'Approved'),
+        ('Partially Approved – Pending Purchase', 'Partially Approved – Pending Purchase'),
         ('Denied', 'Denied'),
-        ('Forwarded_Inv', 'Forwarded_Inv')
+        ('Pending Purchase', 'Pending Purchase'),
+        ('Purchased', 'Purchased'),
+        ('Ready for Pickup', 'Ready for Pickup'),
     ]
 
     requisition_id = models.AutoField(primary_key=True)
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
     date_requested = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
+    admin_message = models.TextField(blank=True, null=True)
+
+    # UPDATED to match your new SQL table
+    status = models.CharField(
+        max_length=100,
+        choices=STATUS_CHOICES,
+        default='Pending Approval'
+    )
+
     remarks = models.TextField(blank=True, null=True)
 
     class Meta:
@@ -83,12 +95,37 @@ class Requisition_Item(models.Model):
     requisition = models.ForeignKey(Requisition, on_delete=models.CASCADE)
     product = models.ForeignKey(Products, on_delete=models.CASCADE)
     quantity = models.DecimalField(max_digits=10, decimal_places=2)
+    approved_qty = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    purchase_qty = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     class Meta:
         db_table = "requisition_item"
 
     def __str__(self):
         return f"{self.product.name} x {self.quantity}"
+
+
+class RequisitionStatusHistory(models.Model):
+    history_id = models.AutoField(primary_key=True)
+    requisition = models.ForeignKey(
+        Requisition,
+        on_delete=models.CASCADE,
+        db_column='requisition_id'
+    )
+    old_status = models.CharField(max_length=40, null=True, blank=True)
+    new_status = models.CharField(max_length=40)
+    changed_by = models.ForeignKey(
+        Admin,
+        on_delete=models.CASCADE,
+        db_column='changed_by'  # matches your table column
+    )
+    changed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'requisition_status_history'
+
+    def __str__(self):
+        return f"REQ-{self.requisition.requisition_id}: {self.old_status} → {self.new_status}"
 
 
 
@@ -108,8 +145,7 @@ class InventoryBalance(models.Model):
         return f"{self.product.name} - {self.unit}"
 
     class Meta:
-        db_table = 'inventory_balance'  # Explicit table name
-# models.py (add below InventoryBalance)
+        db_table = 'inventory_balance'  
 
 class StockIn(models.Model):
     stock_in_id = models.AutoField(primary_key=True)

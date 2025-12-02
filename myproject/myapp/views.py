@@ -1,12 +1,16 @@
 from django.shortcuts import redirect, render
-from myapp.models import Admin, Employee, Requisition, Requisition_Item, Products, InventoryBalance, StockIn, StockOut
+from myapp.models import Admin, Employee, Requisition, Requisition_Item, Products, InventoryBalance, StockIn, StockOut, RequisitionStatusHistory
 from django.contrib import messages
 from django.utils.timezone import now
 from django.utils.crypto import get_random_string
 from datetime import date
 from django.utils import timezone
-
+from django.shortcuts import render, get_object_or_404
+from django.db import transaction
 from decimal import Decimal
+from django.views.decorators.http import require_POST
+from django.db.models import Q
+
 
 
 # Create your views here.
@@ -157,7 +161,7 @@ def addEmployees(request):
 def removeEmployee(request, emp_id):
     acc_id = request.session.get('acc_id')
 
-    emp = Employee.objects.filter(employee_id=emp_id, acc_id=acc_id).first()
+    emp = Employee.objects.filter(employee_id=emp_id, admin_id=acc_id).first()
     if emp:
         # Soft delete - set status to inactive instead of deleting
         emp.status = 'inactive'
@@ -171,15 +175,24 @@ def removeEmployee(request, emp_id):
 
 
 
+
+
 def request(request):
     if 'acc_id' not in request.session:
         return redirect('admin_login')
 
-    # Get current user (employee)
     current_admin = Admin.objects.get(acc_id=request.session['acc_id'])
     
-    # Get products for the form
-    products = Products.objects.all()
+    inventory_products = InventoryBalance.objects.select_related('product').all()
+
+    products = []
+    for inv in inventory_products:
+        products.append({
+            "product_id": inv.product.product_id,
+            "name": inv.product.name,
+            "unit": inv.unit,
+            "available_qty": inv.quantity_unit
+        })
     
     # Get requisitions made by this employee
     employee = Employee.objects.filter(contact_value=current_admin.email).first()
@@ -188,88 +201,38 @@ def request(request):
     else:
         requisitions = Requisition.objects.none()
 
+    # Handle POST (form submission)
     if request.method == "POST":
         product_ids = request.POST.getlist('product_id[]')
         quantities = request.POST.getlist('quantity[]')
-        new_product_names = request.POST.getlist('new_product_name[]')
-        new_product_units = request.POST.getlist('new_product_unit[]')
-        new_product_quantities = request.POST.getlist('new_product_quantity[]')
         remarks = request.POST.get('remarks', '')
 
-        # Combine existing products and new products
         all_items = []
-        
-        # Process existing products
         for pid, qty in zip(product_ids, quantities):
             if pid and qty and float(qty) > 0:
                 all_items.append(('existing', pid, qty))
         
-        # Process new products
-        for name, unit, qty in zip(new_product_names, new_product_units, new_product_quantities):
-            if name and unit and qty and float(qty) > 0:
-                all_items.append(('new', name.strip(), unit, qty))
-        
         if not all_items:
             messages.error(request, "Please select at least one product with quantity greater than 0.")
         else:
-            # Find the employee record for the current user
-            employee = Employee.objects.filter(contact_value=current_admin.email).first()
             if not employee:
                 messages.error(request, "Employee record not found. Please contact administrator.")
                 return redirect('request')
             
-            # Get a department admin to assign as admin_dep
-            department_admin = Admin.objects.filter(role='department_admin', department=employee.department).first()
-            if not department_admin:
-                department_admin = Admin.objects.filter(role='department_admin').first()
-            
-            # Create the requisition
             requisition = Requisition.objects.create(
                 employee=employee,
                 remarks=remarks
             )
             
-            # Track newly created products for success message
-            newly_created_products = []
-            
             for item in all_items:
-                if item[0] == 'existing':  # Existing product
-                    try:
-                        product = Products.objects.get(product_id=item[1])
-                        Requisition_Item.objects.create(
-                            requisition=requisition,
-                            product=product,
-                            quantity=item[2]
-                        )
-                    except Products.DoesNotExist:
-                        continue
-                else:  # New product
-                    # Check if product already exists (case-insensitive)
-                    existing_product = Products.objects.filter(name__iexact=item[1]).first()
-                    
-                    if existing_product:
-                        # Use existing product
-                        product = existing_product
-                    else:
-                        # Create new product
-                        product = Products.objects.create(
-                            name=item[1],
-                            unit=item[2]
-                        )
-                        newly_created_products.append(item[1])
-                    
-                    Requisition_Item.objects.create(
-                        requisition=requisition,
-                        product=product,
-                        quantity=item[3]
-                    )
+                product = Products.objects.get(product_id=item[1])
+                Requisition_Item.objects.create(
+                    requisition=requisition,
+                    product=product,
+                    quantity=item[2]
+                )
             
-            # Success message
-            success_message = f"Requisition #{requisition.requisition_id} submitted successfully! Waiting for approval."
-            if newly_created_products:
-                success_message += f" New products added: {', '.join(newly_created_products)}"
-            
-            messages.success(request, success_message)
+            messages.success(request, f"Requisition #{requisition.requisition_id} submitted successfully! Waiting for approval.")
             return redirect('request')
 
     return render(request, "liong/request.html", {
@@ -280,124 +243,391 @@ def request(request):
     })
 
 
+
+
+
 def employeeDashboard(request):
     return render(request, "liong/employeeDashboard.html")
 
 
+
+
+# ---------------------------------------------------------------
+# ADMIN DASHBOARD - SIMPLE APPROVE/DENY ONLY (NO STOCK CHECK)
+# ---------------------------------------------------------------
 def requestApproval(request):
+    """Admin view - shows all requisitions, only Approve/Deny actions"""
     if 'acc_id' not in request.session:
         return redirect('admin_login')
-    
-    # Get the current admin
+
     current_admin = Admin.objects.get(acc_id=request.session['acc_id'])
     
-    # Get requisitions based on admin role
-    if current_admin.role == 'department_admin':
-        # Department admin sees requisitions for their department
-        requisitions = Requisition.objects.filter(
-            admin_dep=current_admin
-        ).select_related('employee').prefetch_related('requisition_item_set__product').order_by('-date_requested')
-    else:
-        # Other admins see all requisitions
-        requisitions = Requisition.objects.select_related('employee').prefetch_related('requisition_item_set__product').order_by('-date_requested')
-    
-    # Count requisitions by status for statistics
+    # For admin, show ALL requisitions
+    requisitions = (
+        Requisition.objects
+        .select_related('employee')
+        .prefetch_related('requisition_item_set__product')
+        .order_by('-date_requested')
+    )
+
+    # Counts for admin dashboard
     status_counts = {
-        'pending': requisitions.filter(status='Pending').count(),
-        'approved': requisitions.filter(status='Approved_Dep').count(),
+        'pending_approval': requisitions.filter(status='Pending Approval').count(),
+        'partially_approved_pending_purchase': requisitions.filter(status='Partially Approved – Pending Purchase').count(),
+        'pending_purchase': requisitions.filter(status='Pending Purchase').count(),
+        'approved': requisitions.filter(status='Approved').count(),
         'denied': requisitions.filter(status='Denied').count(),
-        'forwarded': requisitions.filter(status='Forwarded_Inv').count(),
     }
-    
+
     return render(request, "liong/requestApproval.html", {
         "requisitions": requisitions,
         "status_counts": status_counts,
         "current_admin": current_admin
     })
 
+
+@require_POST
+@transaction.atomic
 def approve_requisition(request, requisition_id):
+    """ADMIN ACTION: Simple approve - NO STOCK CHECK, always approves"""
     if 'acc_id' not in request.session:
+        messages.error(request, "Please log in first.")
         return redirect('admin_login')
+
+    current_admin = Admin.objects.get(acc_id=request.session['acc_id'])
     
-    try:
-        requisition = Requisition.objects.get(requisition_id=requisition_id)
-        
-        # Check if the current admin has permission to approve this requisition
-        if requisition.acc_id != request.session['acc_id']:
-            messages.error(request, 'You are not authorized to approve this requisition.')
-            return redirect('requestApproval')
-        
-        # Check stock availability before approving
-        can_approve = True
-        low_stock_items = []
-        
-        for item in requisition.requisition_item_set.all():
-            try:
-                balance = InventoryBalance.objects.get(product_id=item.product.product_id)
-                if balance.quantity_unit < item.quantity:
-                    can_approve = False
-                    low_stock_items.append(f"{item.product.name} (Available: {balance.quantity_unit}, Requested: {item.quantity})")
-            except InventoryBalance.DoesNotExist:
-                can_approve = False
-                low_stock_items.append(f"{item.product.name} (No stock data)")
-        
-        if not can_approve:
-            messages.error(request, f'Cannot approve requisition. Insufficient stock: {", ".join(low_stock_items)}')
-            return redirect('requestApproval')
-        
-        requisition.status = 'Approved_Dep'
-        requisition.save()
-        
-        messages.success(request, f'Requisition #{requisition_id} approved successfully!')
-        
-    except Requisition.DoesNotExist:
-        messages.error(request, 'Requisition not found.')
+    # Only super_admin can approve
+    if current_admin.role != 'super_admin':
+        messages.error(request, "You are not authorized to approve requisitions.")
+        return redirect('requestApproval')
+
+    requisition = get_object_or_404(Requisition, pk=requisition_id)
     
+    # Can only approve Pending Approval requisitions
+    if requisition.status != 'Pending Approval':
+        messages.error(request, f"Requisition #{requisition.requisition_id} is already processed.")
+        return redirect('requestApproval')
+
+    old_status = requisition.status
+    
+    # ADMIN RULE: Always approve, NO stock check
+    requisition.status = "Approved"
+    
+    # Set approved quantities equal to requested quantities
+    items = Requisition_Item.objects.filter(requisition=requisition)
+    for item in items:
+        item.approved_quantity = item.quantity
+        item.save()
+    
+    # DO NOT deduct from inventory here - inventory will handle that
+    
+    # Log status change
+    log_status_change(requisition, old_status, requisition.status, request)
+    requisition.save()
+
+    messages.success(request, f"Requisition #{requisition.requisition_id} approved.")
     return redirect('requestApproval')
 
+
+@require_POST
 def deny_requisition(request, requisition_id):
+    """ADMIN ACTION: Simple deny"""
     if 'acc_id' not in request.session:
+        messages.error(request, "Please log in first.")
         return redirect('admin_login')
+
+    current_admin = Admin.objects.get(acc_id=request.session['acc_id'])
     
-    try:
-        requisition = Requisition.objects.get(requisition_id=requisition_id)
-        
-        # Check if the current admin has permission to deny this requisition
-        if requisition.acc_id != request.session['acc_id']:
-            messages.error(request, 'You are not authorized to deny this requisition.')
-            return redirect('requestApproval')
-        
-        requisition.status = 'Denied'
-        requisition.save()
-        
-        messages.success(request, f'Requisition #{requisition_id} denied.')
-        
-    except Requisition.DoesNotExist:
-        messages.error(request, 'Requisition not found.')
+    # Only super_admin can deny
+    if current_admin.role != 'super_admin':
+        messages.error(request, "You are not authorized to deny requisitions.")
+        return redirect('requestApproval')
+
+    requisition = get_object_or_404(Requisition, pk=requisition_id)
     
+    # Can only deny Pending Approval requisitions
+    if requisition.status != 'Pending Approval':
+        messages.error(request, f"Requisition #{requisition.requisition_id} is already processed.")
+        return redirect('requestApproval')
+
+    old_status = requisition.status
+    requisition.status = "Denied"
+    requisition.save()
+
+    # Log status change
+    log_status_change(requisition, old_status, requisition.status, request)
+
+    messages.success(request, f"Requisition #{requisition.requisition_id} denied.")
     return redirect('requestApproval')
 
-def forward_requisition(request, requisition_id):
+
+def admin_requisition_view(request, req_id):
+    """ADMIN VIEW: Modal for admin dashboard (simple view)"""
+    req = get_object_or_404(Requisition, pk=req_id)
+    items = Requisition_Item.objects.filter(requisition=req).select_related('product')
+
+    # Show items without stock check
+    for item in items:
+        item.requested_qty = item.quantity
+
+    return render(request, "liong/partials/admin_requisition_modal.html", {
+        "req": req,
+        "items": items
+    })
+
+
+# ---------------------------------------------------------------
+# INVENTORY DASHBOARD - HANDLES STOCK MANAGEMENT
+# ---------------------------------------------------------------
+def inventory_approved_requisitions(request):
+    """Inventory view - shows ONLY approved requisitions for stock management"""
     if 'acc_id' not in request.session:
         return redirect('admin_login')
+
+    current_admin = Admin.objects.get(acc_id=request.session['acc_id'])
+
+    # Inventory sees ONLY approved requisitions
+    requisitions = (
+        Requisition.objects
+        .filter(status='Approved')  # ONLY approved ones
+        .select_related('employee')
+        .prefetch_related('requisition_item_set__product')
+        .order_by('-date_requested')
+    )
+
+    return render(request, "liong/inventory_approved_requisitions.html", {
+        "requisitions": requisitions,
+        "current_admin": current_admin
+    })
+
+
+@require_POST
+@transaction.atomic
+def inventory_partial_approve(request, requisition_id):
+    """INVENTORY ACTION: Check stock and approve partially if needed"""
+    if 'acc_id' not in request.session:
+        messages.error(request, "Please log in first.")
+        return redirect('admin_login')
+
+    current_admin = Admin.objects.get(acc_id=request.session['acc_id'])
     
+    # Only super_admin (acting as inventory) can do this
+    if current_admin.role != 'super_admin':
+        messages.error(request, "You are not authorized for inventory actions.")
+        return redirect('inventory_approved_requisitions')
+
+    requisition = get_object_or_404(Requisition, pk=requisition_id)
+    
+    # Can only process Approved requisitions
+    if requisition.status != 'Approved':
+        messages.error(request, f"Requisition #{requisition.requisition_id} is not approved.")
+        return redirect('inventory_approved_requisitions')
+
+    old_status = requisition.status
+    items = Requisition_Item.objects.filter(requisition=requisition).select_related('product')
+    partial = False
+    recommendation = ""
+    total_deducted = 0
+
+    for item in items:
+        product = item.product
+        requested_qty = item.quantity
+
+        # Get inventory
+        try:
+            inv_balance = InventoryBalance.objects.get(product=product)
+            available_stock = inv_balance.quantity_unit
+        except InventoryBalance.DoesNotExist:
+            available_stock = 0
+
+        if available_stock <= 0:
+            # No stock at all
+            partial = True
+            item.approved_quantity = 0  # Can't give any
+            recommendation += f"{product.name}: No stock available. Need to purchase {requested_qty}. "
+        
+        elif requested_qty > available_stock:
+            # Partial stock available
+            partial = True
+            item.approved_quantity = available_stock  # Give what we have
+            remaining = requested_qty - available_stock
+            recommendation += f"{product.name}: Only {available_stock} available. Need to purchase {remaining}. "
+            
+            # Deduct available stock
+            inv_balance.quantity_unit = 0
+            inv_balance.save()
+            total_deducted += available_stock
+        
+        else:
+            # Full stock available
+            item.approved_quantity = requested_qty  # Give full amount
+            
+            # Deduct from inventory
+            inv_balance.quantity_unit -= requested_qty
+            inv_balance.save()
+            total_deducted += requested_qty
+
+        item.save()
+
+    # Update requisition status based on inventory check
+    if partial:
+        requisition.status = "Partially Approved – Pending Purchase"
+        requisition.recommendation = recommendation
+        messages.warning(request, f"Requisition #{requisition.requisition_id} partially fulfilled. Stock deducted: {total_deducted}. Purchase needed.")
+    else:
+        # Fully fulfilled from stock
+        requisition.status = "Approved"  # Still approved, but now fulfilled
+        messages.success(request, f"Requisition #{requisition.requisition_id} fully fulfilled from stock. Total deducted: {total_deducted}.")
+
+    # Log status change
+    log_status_change(requisition, old_status, requisition.status, request)
+    requisition.save()
+
+    return redirect('inventory_approved_requisitions')
+
+
+@require_POST
+@transaction.atomic
+def inventory_fulfill_from_stock(request, requisition_id):
+    """INVENTORY ACTION: Try to fulfill from available stock"""
+    if 'acc_id' not in request.session:
+        messages.error(request, "Please log in first.")
+        return redirect('admin_login')
+
+    current_admin = Admin.objects.get(acc_id=request.session['acc_id'])
+    
+    if current_admin.role != 'super_admin':
+        messages.error(request, "You are not authorized for inventory actions.")
+        return redirect('inventory_approved_requisitions')
+
+    requisition = get_object_or_404(Requisition, pk=requisition_id)
+    
+    # Can only process approved or partially approved requisitions
+    if requisition.status not in ['Approved', 'Partially Approved – Pending Purchase']:
+        messages.error(request, f"Requisition #{requisition.requisition_id} cannot be fulfilled.")
+        return redirect('inventory_approved_requisitions')
+
+    old_status = requisition.status
+    items = Requisition_Item.objects.filter(requisition=requisition).select_related('product')
+    can_fully_fulfill = True
+    total_deducted = 0
+
+    # First check if we can fully fulfill
+    for item in items:
+        try:
+            inv_balance = InventoryBalance.objects.get(product=item.product)
+            if inv_balance.quantity_unit < item.quantity:
+                can_fully_fulfill = False
+                break
+        except InventoryBalance.DoesNotExist:
+            can_fully_fulfill = False
+            break
+
+    if can_fully_fulfill:
+        # Fully fulfill from stock
+        for item in items:
+            inv_balance = InventoryBalance.objects.get(product=item.product)
+            inv_balance.quantity_unit -= item.quantity
+            inv_balance.save()
+            total_deducted += item.quantity
+            item.approved_quantity = item.quantity
+            item.save()
+        
+        requisition.status = "Approved"
+        messages.success(request, f"Requisition #{requisition.requisition_id} fully fulfilled from stock. Total deducted: {total_deducted}.")
+    else:
+        # Mark for purchase
+        requisition.status = "Pending Purchase"
+        messages.info(request, f"Requisition #{requisition.requisition_id} marked for purchase (insufficient stock).")
+
+    # Log status change
+    log_status_change(requisition, old_status, requisition.status, request)
+    requisition.save()
+
+    return redirect('inventory_approved_requisitions')
+
+
+def inventory_requisition_view(request, req_id):
+    """INVENTORY VIEW: Modal for inventory dashboard (detailed view with stock info)"""
+    req = get_object_or_404(Requisition, pk=req_id)
+    items = Requisition_Item.objects.filter(requisition=req).select_related('product')
+
+    # Get approval history
+    approval_history = RequisitionStatusHistory.objects.filter(
+        requisition=req
+    ).order_by('-changed_at')
+
+    # Check inventory balance with details
+    for item in items:
+        try:
+            bal = InventoryBalance.objects.get(product=item.product)
+            item.available_qty = bal.quantity_unit
+            item.has_stock = bal.quantity_unit >= item.quantity
+            item.shortage = max(0, item.quantity - bal.quantity_unit)
+        except:
+            item.available_qty = 0
+            item.has_stock = False
+            item.shortage = item.quantity
+
+    return render(request, "liong/partials/inventory_requisition_modal.html", {
+        "req": req,
+        "items": items,
+        "approval_history": approval_history
+    })
+
+
+# ---------------------------------------------------------------
+# SHARED FUNCTIONS
+# ---------------------------------------------------------------
+def log_status_change(req, old_status, new_status, request):
+    """Shared function to log status changes"""
     try:
-        requisition = Requisition.objects.get(requisition_id=requisition_id)
+        admin_id = request.session.get('acc_id')
+        if not admin_id:
+            print("No admin_id in session")
+            return
+            
+        admin_user = Admin.objects.get(pk=admin_id)
         
-        # Check if the current admin has permission to forward this requisition
-        if requisition.acc_id != request.session['acc_id']:
-            messages.error(request, 'You are not authorized to forward this requisition.')
-            return redirect('requestApproval')
+        RequisitionStatusHistory.objects.create(
+            requisition=req,
+            old_status=old_status,
+            new_status=new_status,
+            changed_by=admin_user
+        )
+        print(f"Status change logged: {old_status} -> {new_status} for requisition {req.requisition_id}")
         
-        requisition.status = 'Forwarded_Inv'
-        requisition.save()
-        
-        messages.success(request, f'Requisition #{requisition_id} forwarded to inventory department.')
-        
-    except Requisition.DoesNotExist:
-        messages.error(request, 'Requisition not found.')
-    
-    return redirect('requestApproval')
+    except Admin.DoesNotExist:
+        print(f"Admin with id {admin_id} does not exist")
+    except Exception as e:
+        print(f"Error logging status change: {str(e)}")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

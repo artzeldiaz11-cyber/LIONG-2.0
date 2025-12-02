@@ -7,6 +7,7 @@ class InventorySidebar extends HTMLElement {
       { href: '/inventory-dashboard/stock-in/', label: 'Stock In', icon: 'arrow-down-circle' },
       { href: '/inventory-dashboard/stock-out/', label: 'Stock Out', icon: 'arrow-up-circle' },
       { href: '/inventory-dashboard/balance/', label: 'Balance', icon: 'bar-chart-2' },
+      { href: '/inventory-dashboard/approved_requisitions/', label: 'Manage Request', icon: 'fa-solid fa-gear' },
       { href: '/inventory-dashboard/conversion/', label: 'Conversion Table', icon: 'shuffle' }
     ];
 

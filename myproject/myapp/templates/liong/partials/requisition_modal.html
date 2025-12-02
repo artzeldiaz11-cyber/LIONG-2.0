@@ -1,0 +1,66 @@
+<div class="space-y-4 text-black">
+
+    <p>
+        <strong>Remarks:</strong> 
+        {{ req.remarks|default:"No remarks" }}
+    </p>
+
+    {% if req.admin_message %}
+    <p>
+        <strong>Admin Message:</strong> {{ req.admin_message }}
+    </p>
+    {% endif %}
+
+    <h3 class="font-semibold">ITEMS</h3>
+
+    <div class="border rounded-lg p-3">
+        {% for item in items %}
+        <div class="mb-3">
+            <p class="font-semibold">{{ item.product.name }}</p>
+
+            <p>Requested Quantity: {{ item.quantity }}</p>
+
+            <p class="text-green-700">Available: {{ item.available_qty }}</p>
+
+            {% if item.approved_qty %}
+            <p class="text-blue-700">Approved Quantity: {{ item.approved_qty }}</p>
+            {% endif %}
+
+            {% if item.purchase_qty %}
+            <p class="text-red-700">To Purchase: {{ item.purchase_qty }}</p>
+            {% endif %}
+
+            <p>Request Status: {{ req.status }}</p>
+        </div> 
+        {% endfor %}
+    </div>
+
+    <!-- Admin message box -->
+    <form method="POST" action="{% url 'approve_requisition' req.requisition_id %}">
+        {% csrf_token %}
+
+        <label class="font-semibold block mb-1">Admin Message (Optional)</label>
+        <textarea 
+            name="admin_message" 
+            class="border rounded-lg p-2 w-full text-black"
+            rows="3"
+            placeholder="Enter a message for the requester or inventory team..."
+        ></textarea>
+
+        <div class="flex gap-3 pt-4">
+            <button class="px-4 py-2 bg-green-600 text-white rounded-lg">
+                Approve
+            </button>
+        </form>
+
+        <form method="POST" action="{% url 'deny_requisition' req.requisition_id %}">
+            {% csrf_token %}
+            <button class="px-4 py-2 bg-red-600 text-white rounded-lg">
+                Deny
+            </button>
+        </form>
+    </div>
+
+</div>
+
+

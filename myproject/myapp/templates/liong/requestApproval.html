@@ -15,6 +15,7 @@
         <a href="#"><i class="fa-solid fa-chart-line"></i> Reports</a>
         <a href="{% url 'addEmployees' %}"><i class="fa-solid fa-users"></i> Manage Employees</a>
         <a href="#" class="active"><i class="fa-solid fa-clipboard-check"></i> Approve Requests</a>
+        <a href="{% url 'inventory_approved_requisitions' %}"><i class="fa-solid fa-check-circle"></i> Approved Requests</a>
         <a href="#"><i class="fa-solid fa-warehouse"></i> Inventory</a>
         <a href="#"><i class="fa-solid fa-bell"></i> Notifications</a>
         <a href="#"><i class="fa-solid fa-gear"></i> Settings</a>
@@ -34,13 +35,13 @@
         {% if messages %}
         <div class="mb-6">
             {% for message in messages %}
-            <div class="p-4 rounded-lg {% if message.tags == 'success' %}bg-green-100 text-green-800 border border-green-200{% elif message.tags == 'error' %}bg-red-100 text-red-800 border border-red-200{% else %}bg-blue-100 text-blue-800 border border-blue-200{% endif %}">
+            <div class="p-4 rounded-lg {% if message.tags == 'success' %}bg-green-100 text-green-800 border border-green-200{% elif message.tags == 'error' %}bg-red-100 text-red-800 border border-red-200{% elif message.tags == 'warning' %}bg-yellow-100 text-yellow-800 border border-yellow-200{% elif message.tags == 'info' %}bg-blue-100 text-blue-800 border border-blue-200{% else %}bg-blue-100 text-blue-800 border border-blue-200{% endif %}">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center">
-                        <i class="fas {% if message.tags == 'success' %}fa-check-circle{% elif message.tags == 'error' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %} mr-2"></i>
+                        <i class="fas {% if message.tags == 'success' %}fa-check-circle{% elif message.tags == 'error' %}fa-exclamation-circle{% elif message.tags == 'warning' %}fa-exclamation-triangle{% else %}fa-info-circle{% endif %} mr-2"></i>
                         {{ message }}
                     </div>
-                    <button onclick="this.parentElement.parentElement.style.display='none'" class="text-gray-500 hover:text-gray-700">
+                    <button onclick="this.parentElement.parentElement.remove()" class="text-gray-500 hover:text-gray-700">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -50,15 +51,37 @@
         {% endif %}
 
         <!-- Statistics Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
             <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200 hover:shadow-lg transition-shadow">
                 <div class="flex items-center">
                     <div class="p-3 rounded-lg bg-yellow-100 text-yellow-600 mr-4">
                         <i class="fas fa-clock text-lg"></i>
                     </div>
                     <div>
-                        <p class="text-sm text-gray-500">Pending Review</p>
-                        <p class="text-2xl font-bold text-gray-800">{{ status_counts.pending }}</p>
+                        <p class="text-sm text-gray-500">Pending Approval</p>
+                        <p class="text-2xl font-bold text-gray-800">{{ status_counts.pending_approval }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200 hover:shadow-lg transition-shadow">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-lg bg-blue-100 text-blue-600 mr-4">
+                        <i class="fas fa-hourglass-half text-lg"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Partial Approval</p>
+                        <p class="text-2xl font-bold text-gray-800">{{ status_counts.partially_approved_pending_purchase }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200 hover:shadow-lg transition-shadow">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-lg bg-orange-100 text-orange-600 mr-4">
+                        <i class="fas fa-shopping-cart text-lg"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Pending Purchase</p>
+                        <p class="text-2xl font-bold text-gray-800">{{ status_counts.pending_purchase }}</p>
                     </div>
                 </div>
             </div>
@@ -81,17 +104,6 @@
                     <div>
                         <p class="text-sm text-gray-500">Denied</p>
                         <p class="text-2xl font-bold text-gray-800">{{ status_counts.denied }}</p>
-                    </div>
-                </div>
-            </div>
-            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200 hover:shadow-lg transition-shadow">
-                <div class="flex items-center">
-                    <div class="p-3 rounded-lg bg-blue-100 text-blue-600 mr-4">
-                        <i class="fas fa-share text-lg"></i>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-500">Forwarded</p>
-                        <p class="text-2xl font-bold text-gray-800">{{ status_counts.forwarded }}</p>
                     </div>
                 </div>
             </div>
@@ -143,47 +155,65 @@
                         </td>
                         <td class="px-6 py-4 text-sm">
                             <span class="px-3 py-1 rounded-full text-xs font-medium 
-                                {% if req.status == 'Pending' %}bg-yellow-100 text-yellow-800 border border-yellow-200
-                                {% elif req.status == 'Approved_Dep' %}bg-green-100 text-green-800 border border-green-200
+                                {% if req.status == 'Pending Approval' %}bg-yellow-100 text-yellow-800 border border-yellow-200
+                                {% elif req.status == 'Approved' %}bg-green-100 text-green-800 border border-green-200
                                 {% elif req.status == 'Denied' %}bg-red-100 text-red-800 border border-red-200
-                                {% elif req.status == 'Forwarded_Inv' %}bg-blue-100 text-blue-800 border border-blue-200
+                                {% elif req.status == 'Partially Approved – Pending Purchase' %}bg-blue-100 text-blue-800 border border-blue-200
+                                {% elif req.status == 'Pending Purchase' %}bg-orange-100 text-orange-800 border border-orange-200
                                 {% else %}bg-gray-100 text-gray-800 border border-gray-200{% endif %}">
                                 <i class="fas 
-                                    {% if req.status == 'Pending' %}fa-clock
-                                    {% elif req.status == 'Approved_Dep' %}fa-check-circle
+                                    {% if req.status == 'Pending Approval' %}fa-clock
+                                    {% elif req.status == 'Approved' %}fa-check-circle
                                     {% elif req.status == 'Denied' %}fa-times-circle
-                                    {% elif req.status == 'Forwarded_Inv' %}fa-share-square
+                                    {% elif req.status == 'Partially Approved – Pending Purchase' %}fa-hourglass-half
+                                    {% elif req.status == 'Pending Purchase' %}fa-shopping-cart
                                     {% else %}fa-question-circle{% endif %} mr-1"></i>
                                 {{ req.status }}
                             </span>
                         </td>
                         <td class="px-6 py-4 text-sm">
-                            {% if req.status == 'Pending' %}
-                            <div class="flex flex-col space-y-2">
-                                <form method="POST" action="{% url 'approve_requisition' req.requisition_id %}">
-                                    {% csrf_token %}
-                                    <button type="submit" class="w-full px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm transition duration-200 flex items-center justify-center"
-                                            onclick="return confirm('Approve requisition #{{ req.requisition_id }}? This will check stock availability.')">
-                                        <i class="fas fa-check mr-1"></i> Approve
+                            <!-- ONLY SHOW FOR PENDING APPROVAL -->
+                            {% if req.status == 'Pending Approval' %}
+                                {% if current_admin.role == 'super_admin' %}
+                                <div class="flex flex-col space-y-2">
+                                    <!-- APPROVE BUTTON - NO STOCK CHECK -->
+                                    <form method="POST" action="{% url 'approve_requisition' req.requisition_id %}">
+                                        {% csrf_token %}
+                                        <button type="submit" 
+                                                onclick="return confirm('Approve requisition #{{ req.requisition_id }}? This will approve regardless of stock availability.')"
+                                                class="w-full px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm transition duration-200 flex items-center justify-center shadow-sm hover:shadow">
+                                            <i class="fas fa-check mr-1"></i> Approve
+                                        </button>
+                                    </form>
+                                    
+                                    <!-- DENY BUTTON -->
+                                    <form method="POST" action="{% url 'deny_requisition' req.requisition_id %}">
+                                        {% csrf_token %}
+                                        <button type="submit" 
+                                                onclick="return confirm('Deny requisition #{{ req.requisition_id }}?')"
+                                                class="w-full px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm transition duration-200 flex items-center justify-center shadow-sm hover:shadow">
+                                            <i class="fas fa-times mr-1"></i> Deny
+                                        </button>
+                                    </form>
+                                    
+                                    <!-- VIEW DETAILS BUTTON -->
+                                    <button onclick="openModal('{{ req.requisition_id }}')"
+                                        class="w-full px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm transition duration-200 flex items-center justify-center">
+                                        <i class="fas fa-eye mr-1"></i> View Details
                                     </button>
-                                </form>
-                                <form method="POST" action="{% url 'deny_requisition' req.requisition_id %}">
-                                    {% csrf_token %}
-                                    <button type="submit" class="w-full px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm transition duration-200 flex items-center justify-center"
-                                            onclick="return confirm('Deny requisition #{{ req.requisition_id }}?')">
-                                        <i class="fas fa-times mr-1"></i> Deny
-                                    </button>
-                                </form>
-                                <form method="POST" action="{% url 'forward_requisition' req.requisition_id %}">
-                                    {% csrf_token %}
-                                    <button type="submit" class="w-full px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm transition duration-200 flex items-center justify-center"
-                                            onclick="return confirm('Forward requisition #{{ req.requisition_id }} to inventory department?')">
-                                        <i class="fas fa-share mr-1"></i> Forward
-                                    </button>
-                                </form>
-                            </div>
+                                </div>
+                                {% else %}
+                                <div class="text-xs text-gray-500">
+                                    <span class="text-gray-400 text-sm italic">No permission</span><br>
+                                    <span class="text-xs">(Your role: {{ current_admin.role }})</span>
+                                </div>
+                                {% endif %}
                             {% else %}
-                            <span class="text-gray-400 text-sm italic">Processed</span>
+                                <!-- For non-pending requisitions, show View Details button -->
+                                <button onclick="openModal('{{ req.requisition_id }}')"
+                                    class="w-full px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm transition duration-200 flex items-center justify-center">
+                                    <i class="fas fa-eye mr-1"></i> View Details
+                                </button>
                             {% endif %}
                         </td>
                     </tr>
@@ -194,9 +224,32 @@
             <div class="text-center py-12">
                 <i class="fas fa-clipboard-list text-5xl text-gray-300 mb-4"></i>
                 <p class="text-gray-500 text-lg font-medium">No requisitions found</p>
-                <p class="text-gray-400 text-sm mt-2">All requisitions have been processed or no requests are available for your department.</p>
+                <p class="text-gray-400 text-sm mt-2">All requisitions have been processed or no requests are available.</p>
             </div>
             {% endif %}
+        </div>
+
+        <!-- MODAL for Admin -->
+        <div id="reqModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-semibold text-gray-800">Requisition Details</h2>
+                    <button onclick="closeModal()" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+
+                <div id="modalContent">
+                    <!-- AJAX loads content here -->
+                </div>
+
+                <div class="mt-6 flex justify-end">
+                    <button onclick="closeModal()" 
+                        class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">
+                        Close
+                    </button>
+                </div>
+            </div>
         </div>
 
     </main>
@@ -261,5 +314,43 @@
             .main-content { padding: 15px; }
         }
     </style>
+
+    <script>
+    function openModal(reqId) {
+        fetch(`/admin-requisition/view/${reqId}/`)
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById("modalContent").innerHTML = html;
+                document.getElementById("reqModal").classList.remove("hidden");
+            })
+            .catch(error => {
+                console.error('Error loading modal:', error);
+                document.getElementById("modalContent").innerHTML = 
+                    '<div class="text-red-500 p-4">Error loading requisition details.</div>';
+            });
+    }
+
+    function closeModal() {
+        document.getElementById("reqModal").classList.add("hidden");
+        document.getElementById("modalContent").innerHTML = '';
+    }
+
+    // Close modal when clicking outside
+    document.getElementById('reqModal').addEventListener('click', function(e) {
+        if (e.target.id === 'reqModal') {
+            closeModal();
+        }
+    });
+
+    // Auto-remove messages after 5 seconds
+    setTimeout(function() {
+        const messages = document.querySelectorAll('.p-4.rounded-lg');
+        messages.forEach(function(message) {
+            message.style.transition = 'opacity 0.5s';
+            message.style.opacity = '0';
+            setTimeout(() => message.remove(), 500);
+        });
+    }, 5000);
+    </script>
 </body>
 </html>
