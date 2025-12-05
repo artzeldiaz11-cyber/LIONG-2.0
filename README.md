@@ -10,7 +10,6 @@ CREATE TABLE account (
 );
 
 CREATE TABLE employee (
-
     employee_id SERIAL PRIMARY KEY,
     employee_name VARCHAR(100) NOT NULL,
 	acc_id INT NOT NULL REFERENCES account(acc_id),
