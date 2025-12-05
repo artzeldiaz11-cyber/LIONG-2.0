@@ -10,6 +10,8 @@ from django.db import transaction
 from decimal import Decimal
 from django.views.decorators.http import require_POST
 from django.db.models import Q
+from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 
 
 
@@ -886,3 +888,220 @@ def balance(request):
 def admin_logout(request):
     request.session.flush()
     return redirect('admin_login')
+
+@login_required
+def employeeDashboard(request):
+    if 'acc_id' not in request.session:
+        return redirect('admin_login')
+
+    current_admin = Admin.objects.get(acc_id=request.session['acc_id'])
+    
+    # Get employee record
+    employee = Employee.objects.filter(admin=current_admin).first()
+    
+    # Statistics
+    total_employees = Employee.objects.filter(status='active').count()
+    
+    # Get employee's requisitions
+    if employee:
+        my_requisitions = Requisition.objects.filter(employee=employee)
+        my_total_requests = my_requisitions.count()
+        pending_requests = my_requisitions.filter(status='Pending Approval').count()
+        approved_requests = my_requisitions.filter(status='Approved').count()
+        processing_requests = my_requisitions.filter(status__in=['Pending Purchase', 'Partially Approved – Pending Purchase']).count()
+        denied_requests = my_requisitions.filter(status='Denied').count()
+    else:
+        my_total_requests = 0
+        pending_requests = 0
+        approved_requests = 0
+        processing_requests = 0
+        denied_requests = 0
+    
+    # Recent activities (mock data for now)
+    recent_activities = [
+        {
+            'type': 'request',
+            'message': 'Submitted new supply request for fabric rolls',
+            'time': '2 hours ago'
+        },
+        {
+            'type': 'approval',
+            'message': 'Request #234 approved by supervisor',
+            'time': '1 day ago'
+        },
+        {
+            'type': 'status_change',
+            'message': 'Request #231 status changed to "Processing"',
+            'time': '2 days ago'
+        }
+    ]
+    
+    # Low stock items (mock for now)
+    low_stock_items = [
+        {'name': 'Cotton Fabric', 'quantity': 5, 'unit': 'rolls'},
+        {'name': 'Thread Spools', 'quantity': 12, 'unit': 'pieces'}
+    ]
+    
+    context = {
+        'current_user': current_admin,
+        'employee': employee,
+        'total_employees': total_employees,
+        'my_total_requests': my_total_requests,
+        'pending_requests': pending_requests,
+        'approved_requests': approved_requests,
+        'processing_requests': processing_requests,
+        'denied_requests': denied_requests,
+        'recent_activities': recent_activities,
+        'low_stock_items': low_stock_items if low_stock_items else None
+    }
+    
+    return render(request, "liong/employeeDashboard.html", context)
+
+@login_required
+def requestHistory(request):
+    if 'acc_id' not in request.session:
+        return redirect('admin_login')
+
+    current_admin = Admin.objects.get(acc_id=request.session['acc_id'])
+    employee = Employee.objects.filter(admin=current_admin).first()
+    
+    # TEMPORARY: Comment out the redirect - keep for reference but don't execute
+    # if not employee:
+    #     return redirect('employeeDashboard')
+    
+    if employee:
+        # Get employee's requisitions (original logic)
+        requisitions = Requisition.objects.filter(employee=employee).order_by('-date_requested')
+        total_requests = requisitions.count()
+        approved_count = requisitions.filter(status='Approved').count()
+        pending_count = requisitions.filter(status='Pending Approval').count()
+        denied_count = requisitions.filter(status='Denied').count()
+        
+        # Pagination for employee's requisitions
+        page = request.GET.get('page', 1)
+        paginator = Paginator(requisitions, 10)
+        try:
+            requisitions_page = paginator.page(page)
+        except:
+            requisitions_page = paginator.page(1)
+    else:
+        # No employee record - show empty data with zero statistics
+        requisitions = []  # Empty list for pagination
+        total_requests = 0
+        approved_count = 0
+        pending_count = 0
+        denied_count = 0
+        
+        # Create empty paginator for empty data
+        page = request.GET.get('page', 1)
+        paginator = Paginator([], 10)  # Empty paginator
+        try:
+            requisitions_page = paginator.page(page)
+        except:
+            requisitions_page = paginator.page(1)
+    
+    context = {
+        'current_user': current_admin,
+        'requests': requisitions_page,
+        'total_requests': total_requests,
+        'approved_count': approved_count,
+        'pending_count': pending_count,
+        'denied_count': denied_count
+    }
+    
+    return render(request, "liong/requestHistory.html", context)
+
+@login_required
+def notifications(request):
+    if 'acc_id' not in request.session:
+        return redirect('admin_login')
+
+    current_admin = Admin.objects.get(acc_id=request.session['acc_id'])
+    
+    # Mock notifications (in real app, these would come from a database)
+    notifications_list = [
+        {
+            'id': 1,
+            'type': 'approval',
+            'title': 'Request Approved',
+            'message': 'Your request #234 for fabric rolls has been approved.',
+            'time': '2 hours ago',
+            'read': False,
+            'important': True,
+            'requisition_id': 234,
+            'actions': [
+                {'label': 'View', 'icon': 'fas fa-eye', 'function': 'viewRequest(234)'},
+                {'label': 'Download', 'icon': 'fas fa-download', 'function': 'downloadApproval(234)'}
+            ]
+        },
+        {
+            'id': 2,
+            'type': 'reminder',
+            'title': 'Request Pending',
+            'message': 'Request #231 is still pending approval for 3 days.',
+            'time': '1 day ago',
+            'read': True,
+            'important': False,
+            'requisition_id': 231,
+            'actions': [
+                {'label': 'Check Status', 'icon': 'fas fa-sync', 'function': 'checkStatus(231)'}
+            ]
+        },
+        {
+            'id': 3,
+            'type': 'system',
+            'title': 'System Update',
+            'message': 'LIONG system will undergo maintenance on Sunday, 2:00 AM - 4:00 AM.',
+            'time': '2 days ago',
+            'read': True,
+            'important': True,
+            'requisition_id': None,
+            'actions': []
+        },
+        {
+            'id': 4,
+            'type': 'status_change',
+            'title': 'Status Updated',
+            'message': 'Request #229 status changed to "Ready for Pickup".',
+            'time': '3 days ago',
+            'read': True,
+            'important': False,
+            'requisition_id': 229,
+            'actions': [
+                {'label': 'Confirm Pickup', 'icon': 'fas fa-check', 'function': 'confirmPickup(229)'}
+            ]
+        }
+    ]
+    
+    # Counts
+    unread_count = len([n for n in notifications_list if not n['read']])
+    today_count = 2  # Mock count for today
+    week_count = len(notifications_list)
+    
+    context = {
+        'current_user': current_admin,
+        'notifications': notifications_list,
+        'unread_count': unread_count,
+        'today_count': today_count,
+        'week_count': week_count,
+        'today_date': date.today().strftime("%B %d, %Y"),
+        'active_tab': 'all'
+    }
+    
+    return render(request, "liong/notifications.html", context)
+
+@login_required
+def settings(request):
+    if 'acc_id' not in request.session:
+        return redirect('admin_login')
+
+    current_admin = Admin.objects.get(acc_id=request.session['acc_id'])
+    employee = Employee.objects.filter(admin=current_admin).first()
+    
+    context = {
+        'current_user': current_admin,
+        'employee': employee,
+        'last_login': 'Today, 9:30 AM'  # In real app, get from login history
+    }
+    
+    return render(request, "liong/settings.html", context)
