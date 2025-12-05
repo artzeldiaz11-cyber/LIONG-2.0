@@ -1,9 +1,10 @@
+<!-- employeeDashboard.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>LIONG | Request Supplies</title>
+    <title>LIONG | Employee Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
 </head>
@@ -13,10 +14,218 @@
         <h2>Employee Panel</h2>
         <a href="{% url 'employeeDashboard' %}" class="active"><i class="fa-solid fa-gauge"></i> Dashboard</a>
         <a href="{% url 'request' %}"><i class="fa-solid fa-cart-shopping"></i> Request Supplies</a>
-        <a href="#"><i class="fa-solid fa-clock-rotate-left"></i> Request History</a>
-        <a href="#"><i class="fa-solid fa-bell"></i> Notifications</a>
-        <a href="#"><i class="fa-solid fa-gear"></i> Settings</a>
+        <a href="{% url 'requestHistory' %}"><i class="fa-solid fa-clock-rotate-left"></i> Request History</a>
+        <a href="{% url 'notifications' %}"><i class="fa-solid fa-bell"></i> Notifications</a>
+        <a href="{% url 'settings' %}"><i class="fa-solid fa-gear"></i> Settings</a>
     </div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-800">
+                    <i class="fas fa-tape text-purple-600 mr-2"></i>
+                    LIONG Garments - Employee Dashboard
+                </h1>
+                <p class="text-gray-600 mt-1">Welcome back, {{ current_user.name }}</p>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="text-sm text-gray-600 bg-white px-3 py-1 rounded-lg border">
+                    <i class="fas fa-user mr-1"></i>
+                    {{ current_user.name }}
+                </div>
+                <a href="#" class="text-purple-600 hover:text-purple-800">
+                    <i class="fas fa-sign-out-alt"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- Dashboard Statistics -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Total Employees -->
+            <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-500">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-gray-500 text-sm">Total Employees</p>
+                        <h3 class="text-2xl font-bold text-gray-800">{{ total_employees }}</h3>
+                    </div>
+                    <div class="bg-blue-100 p-3 rounded-full">
+                        <i class="fas fa-users text-blue-600 text-xl"></i>
+                    </div>
+                </div>
+                <p class="text-gray-500 text-sm mt-2">
+                    <i class="fas fa-tshirt mr-1"></i>
+                    Active staff in LIONG
+                </p>
+            </div>
+
+            <!-- Total Requests -->
+            <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-500">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-gray-500 text-sm">My Requests</p>
+                        <h3 class="text-2xl font-bold text-gray-800">{{ my_total_requests }}</h3>
+                    </div>
+                    <div class="bg-green-100 p-3 rounded-full">
+                        <i class="fas fa-clipboard-list text-green-600 text-xl"></i>
+                    </div>
+                </div>
+                <p class="text-gray-500 text-sm mt-2">
+                    <i class="fas fa-scissors mr-1"></i>
+                    All time requests
+                </p>
+            </div>
+
+            <!-- Pending Requests -->
+            <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-yellow-500">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-gray-500 text-sm">Pending</p>
+                        <h3 class="text-2xl font-bold text-gray-800">{{ pending_requests }}</h3>
+                    </div>
+                    <div class="bg-yellow-100 p-3 rounded-full">
+                        <i class="fas fa-clock text-yellow-600 text-xl"></i>
+                    </div>
+                </div>
+                <p class="text-gray-500 text-sm mt-2">
+                    <i class="fas fa-thread mr-1"></i>
+                    Awaiting approval
+                </p>
+            </div>
+
+            <!-- Approved Requests -->
+            <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-purple-500">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-gray-500 text-sm">Approved</p>
+                        <h3 class="text-2xl font-bold text-gray-800">{{ approved_requests }}</h3>
+                    </div>
+                    <div class="bg-purple-100 p-3 rounded-full">
+                        <i class="fas fa-check-circle text-purple-600 text-xl"></i>
+                    </div>
+                </div>
+                <p class="text-gray-500 text-sm mt-2">
+                    <i class="fas fa-ruler-combined mr-1"></i>
+                    Ready for use
+                </p>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <!-- Request Status Chart -->
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">
+                    <i class="fas fa-chart-pie mr-2"></i>My Requests Overview
+                </h2>
+                <div class="h-64 flex items-center justify-center">
+                    <!-- This would be a chart in real implementation -->
+                    <div class="text-center">
+                        <div class="relative w-40 h-40 mx-auto mb-4">
+                            <!-- Pie chart visualization -->
+                            <div class="absolute inset-0 rounded-full border-8 border-blue-500"></div>
+                            <div class="absolute inset-0 rounded-full border-8 border-green-500" style="clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%);"></div>
+                            <div class="absolute inset-0 rounded-full border-8 border-yellow-500" style="clip-path: polygon(50% 0, 100% 0, 100% 50%, 50% 50%);"></div>
+                            <div class="absolute inset-0 rounded-full border-8 border-red-500" style="clip-path: polygon(50% 50%, 100% 50%, 100% 100%, 50% 100%);"></div>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+                                <span class="text-sm">Pending: {{ pending_requests }}</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                                <span class="text-sm">Approved: {{ approved_requests }}</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
+                                <span class="text-sm">Processing: {{ processing_requests }}</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                                <span class="text-sm">Denied: {{ denied_requests }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">
+                    <i class="fas fa-history mr-2"></i>Recent Activity
+                </h2>
+                <div class="space-y-4">
+                    {% for activity in recent_activities %}
+                    <div class="flex items-center p-3 bg-gray-50 rounded-lg">
+                        <div class="mr-3">
+                            {% if activity.type == 'request' %}
+                            <i class="fas fa-paper-plane text-blue-500"></i>
+                            {% elif activity.type == 'approval' %}
+                            <i class="fas fa-check-circle text-green-500"></i>
+                            {% elif activity.type == 'denial' %}
+                            <i class="fas fa-times-circle text-red-500"></i>
+                            {% else %}
+                            <i class="fas fa-info-circle text-gray-500"></i>
+                            {% endif %}
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-gray-800">{{ activity.message }}</p>
+                            <p class="text-xs text-gray-500">{{ activity.time }}</p>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-4 text-gray-500">
+                        <i class="fas fa-inbox text-3xl mb-2"></i>
+                        <p>No recent activity</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">
+                <i class="fas fa-bolt mr-2"></i>Quick Actions
+            </h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <a href="{% url 'request' %}" class="bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg p-4 text-center transition duration-200">
+                    <i class="fas fa-cart-shopping text-purple-600 text-xl mb-2"></i>
+                    <p class="font-medium text-gray-800">Request Supplies</p>
+                    <p class="text-xs text-gray-500">New requisition</p>
+                </a>
+                <a href="{% url 'requestHistory' %}" class="bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg p-4 text-center transition duration-200">
+                    <i class="fas fa-history text-blue-600 text-xl mb-2"></i>
+                    <p class="font-medium text-gray-800">View History</p>
+                    <p class="text-xs text-gray-500">Past requests</p>
+                </a>
+                <a href="#" class="bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg p-4 text-center transition duration-200">
+                    <i class="fas fa-file-alt text-green-600 text-xl mb-2"></i>
+                    <p class="font-medium text-gray-800">My Reports</p>
+                    <p class="text-xs text-gray-500">Usage statistics</p>
+                </a>
+                <a href="{% url 'settings' %}" class="bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-4 text-center transition duration-200">
+                    <i class="fas fa-cogs text-gray-600 text-xl mb-2"></i>
+                    <p class="font-medium text-gray-800">Settings</p>
+                    <p class="text-xs text-gray-500">Account preferences</p>
+                </a>
+            </div>
+        </div>
+
+        <!-- Low Stock Alert -->
+        {% if low_stock_items %}
+        <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-8">
+            <div class="flex items-center">
+                <i class="fas fa-exclamation-triangle text-yellow-600 text-xl mr-3"></i>
+                <div class="flex-1">
+                    <h3 class="font-semibold text-yellow-800">Low Stock Alert</h3>
+                    <p class="text-yellow-700 text-sm">Some items you frequently request are running low</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
 
     </main>
 
@@ -80,8 +289,6 @@
             .sidebar a { margin-bottom: 0; margin-right: 10px; white-space: nowrap; }
             .main-content { padding: 15px; }
         }
-        
-        .hidden { display: none; }
     </style>
 
 </body>
