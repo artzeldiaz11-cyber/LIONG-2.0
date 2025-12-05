@@ -7,6 +7,8 @@
     <title>LIONG | Employee Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <!-- Chart.js for bar graph -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-gray-50">
     <!-- Sidebar -->
@@ -114,39 +116,42 @@
 
         <!-- Charts Section -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <!-- Request Status Chart -->
+            <!-- Request Status Bar Graph -->
             <div class="bg-white rounded-xl shadow-md p-6">
                 <h2 class="text-lg font-semibold text-gray-800 mb-4">
-                    <i class="fas fa-chart-pie mr-2"></i>My Requests Overview
+                    <i class="fas fa-chart-bar mr-2"></i>My Requests Overview
                 </h2>
-                <div class="h-64 flex items-center justify-center">
-                    <!-- This would be a chart in real implementation -->
-                    <div class="text-center">
-                        <div class="relative w-40 h-40 mx-auto mb-4">
-                            <!-- Pie chart visualization -->
-                            <div class="absolute inset-0 rounded-full border-8 border-blue-500"></div>
-                            <div class="absolute inset-0 rounded-full border-8 border-green-500" style="clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%);"></div>
-                            <div class="absolute inset-0 rounded-full border-8 border-yellow-500" style="clip-path: polygon(50% 0, 100% 0, 100% 50%, 50% 50%);"></div>
-                            <div class="absolute inset-0 rounded-full border-8 border-red-500" style="clip-path: polygon(50% 50%, 100% 50%, 100% 100%, 50% 100%);"></div>
+                <div class="h-64">
+                    <canvas id="requestBarChart"></canvas>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4 text-center">
+                    <div class="bg-blue-50 p-2 rounded">
+                        <div class="flex items-center justify-center">
+                            <div class="w-3 h-3 bg-blue-500 rounded-full mr-1"></div>
+                            <span class="text-sm font-medium">Pending</span>
                         </div>
-                        <div class="space-y-2">
-                            <div class="flex items-center">
-                                <div class="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
-                                <span class="text-sm">Pending: {{ pending_requests }}</span>
-                            </div>
-                            <div class="flex items-center">
-                                <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-                                <span class="text-sm">Approved: {{ approved_requests }}</span>
-                            </div>
-                            <div class="flex items-center">
-                                <div class="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
-                                <span class="text-sm">Processing: {{ processing_requests }}</span>
-                            </div>
-                            <div class="flex items-center">
-                                <div class="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
-                                <span class="text-sm">Denied: {{ denied_requests }}</span>
-                            </div>
+                        <div class="text-lg font-bold">{{ pending_requests }}</div>
+                    </div>
+                    <div class="bg-green-50 p-2 rounded">
+                        <div class="flex items-center justify-center">
+                            <div class="w-3 h-3 bg-green-500 rounded-full mr-1"></div>
+                            <span class="text-sm font-medium">Approved</span>
                         </div>
+                        <div class="text-lg font-bold">{{ approved_requests }}</div>
+                    </div>
+                    <div class="bg-yellow-50 p-2 rounded">
+                        <div class="flex items-center justify-center">
+                            <div class="w-3 h-3 bg-yellow-500 rounded-full mr-1"></div>
+                            <span class="text-sm font-medium">Processing</span>
+                        </div>
+                        <div class="text-lg font-bold">{{ processing_requests }}</div>
+                    </div>
+                    <div class="bg-red-50 p-2 rounded">
+                        <div class="flex items-center justify-center">
+                            <div class="w-3 h-3 bg-red-500 rounded-full mr-1"></div>
+                            <span class="text-sm font-medium">Denied</span>
+                        </div>
+                        <div class="text-lg font-bold">{{ denied_requests }}</div>
                     </div>
                 </div>
             </div>
@@ -290,6 +295,91 @@
             .main-content { padding: 15px; }
         }
     </style>
+
+    <script>
+        // Initialize bar chart when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            const ctx = document.getElementById('requestBarChart').getContext('2d');
+            
+            // Get data from Django template variables
+            const pending = parseInt('{{ pending_requests|default:"0" }}') || 0;
+            const approved = parseInt('{{ approved_requests|default:"0" }}') || 0;
+            const processing = parseInt('{{ processing_requests|default:"0" }}') || 0;
+            const denied = parseInt('{{ denied_requests|default:"0" }}') || 0;
+            
+            const requestBarChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Pending', 'Approved', 'Processing', 'Denied'],
+                    datasets: [{
+                        label: 'Number of Requests',
+                        data: [pending, approved, processing, denied],
+                        backgroundColor: [
+                            'rgba(59, 130, 246, 0.7)',  // Blue for Pending
+                            'rgba(34, 197, 94, 0.7)',   // Green for Approved
+                            'rgba(234, 179, 8, 0.7)',   // Yellow for Processing
+                            'rgba(239, 68, 68, 0.7)'    // Red for Denied
+                        ],
+                        borderColor: [
+                            'rgb(59, 130, 246)',   // Blue
+                            'rgb(34, 197, 94)',    // Green
+                            'rgb(234, 179, 8)',    // Yellow
+                            'rgb(239, 68, 68)'     // Red
+                        ],
+                        borderWidth: 2,
+                        borderRadius: 8,
+                        borderSkipped: false,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.parsed.y}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1,
+                                callback: function(value) {
+                                    if (Number.isInteger(value)) {
+                                        return value;
+                                    }
+                                }
+                            },
+                            grid: {
+                                drawBorder: false
+                            },
+                            title: {
+                                display: true,
+                                text: 'Number of Requests'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                font: {
+                                    weight: 'bold'
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
 
 </body>
 </html>
