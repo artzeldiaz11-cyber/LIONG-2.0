@@ -12,10 +12,10 @@
     <div class="sidebar">
         <h2>Employee Panel</h2>
         <a href="{% url 'employeeDashboard' %}"><i class="fa-solid fa-gauge"></i> Dashboard</a>
-        <a href="#" class="active"><i class="fa-solid fa-cart-shopping"></i> Request Supplies</a>
-        <a href="#"><i class="fa-solid fa-clock-rotate-left"></i> Request History</a>
-        <a href="#"><i class="fa-solid fa-bell"></i> Notifications</a>
-        <a href="#"><i class="fa-solid fa-gear"></i> Settings</a>
+        <a href="{% url 'request' %}" class="active"><i class="fa-solid fa-cart-shopping"></i> Request Supplies</a>
+        <a href="{% url 'requestHistory' %}"><i class="fa-solid fa-clock-rotate-left"></i> Request History</a>
+        <a href="{% url 'notifications' %}"><i class="fa-solid fa-bell"></i> Notifications</a>
+        <a href="{% url 'settings' %}"><i class="fa-solid fa-gear"></i> Settings</a>
     </div>
 
     <!-- Main Content -->
