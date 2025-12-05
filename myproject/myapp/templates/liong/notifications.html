@@ -1,0 +1,497 @@
+<!-- notifications.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>LIONG | Notifications</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>Employee Panel</h2>
+        <a href="{% url 'employeeDashboard' %}"><i class="fa-solid fa-gauge"></i> Dashboard</a>
+        <a href="{% url 'request' %}"><i class="fa-solid fa-cart-shopping"></i> Request Supplies</a>
+        <a href="{% url 'requestHistory' %}"><i class="fa-solid fa-clock-rotate-left"></i> Request History</a>
+        <a href="{% url 'notifications' %}" class="active"><i class="fa-solid fa-bell"></i> Notifications</a>
+        <a href="{% url 'settings' %}"><i class="fa-solid fa-gear"></i> Settings</a>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-800">
+                    <i class="fas fa-bell text-purple-600 mr-2"></i>
+                    Notifications
+                </h1>
+                <p class="text-gray-600 mt-1">Stay updated with your requests and system alerts</p>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="relative">
+                    {% if unread_count > 0 %}
+                    <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {{ unread_count }}
+                    </span>
+                    {% endif %}
+                    <div class="text-sm text-gray-600 bg-white px-3 py-1 rounded-lg border">
+                        <i class="fas fa-user mr-1"></i>
+                        {{ current_user.name }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notification Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Unread</p>
+                        <h3 class="text-2xl font-bold text-gray-800">{{ unread_count }}</h3>
+                    </div>
+                    <div class="bg-red-100 p-3 rounded-full">
+                        <i class="fas fa-envelope text-red-600 text-xl"></i>
+                    </div>
+                </div>
+                <button onclick="markAllAsRead()" class="mt-4 text-sm text-red-600 hover:text-red-800">
+                    <i class="fas fa-check-double mr-1"></i> Mark all as read
+                </button>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Today</p>
+                        <h3 class="text-2xl font-bold text-gray-800">{{ today_count }}</h3>
+                    </div>
+                    <div class="bg-blue-100 p-3 rounded-full">
+                        <i class="fas fa-calendar-day text-blue-600 text-xl"></i>
+                    </div>
+                </div>
+                <p class="mt-2 text-sm text-gray-500">{{ today_date }}</p>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">This Week</p>
+                        <h3 class="text-2xl font-bold text-gray-800">{{ week_count }}</h3>
+                    </div>
+                    <div class="bg-green-100 p-3 rounded-full">
+                        <i class="fas fa-calendar-week text-green-600 text-xl"></i>
+                    </div>
+                </div>
+                <p class="mt-2 text-sm text-gray-500">Last 7 days</p>
+            </div>
+        </div>
+
+        <!-- Filter Tabs -->
+        <div class="bg-white rounded-xl shadow-md p-4 mb-6">
+            <div class="flex space-x-4 border-b">
+                <button onclick="filterNotifications('all')" 
+                        class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent hover:text-purple-600 {% if active_tab == 'all' %}border-purple-600 text-purple-600{% endif %}">
+                    <i class="fas fa-list mr-1"></i> All ({{ notifications|length }})
+                </button>
+                <button onclick="filterNotifications('unread')" 
+                        class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent hover:text-red-600 {% if active_tab == 'unread' %}border-red-600 text-red-600{% endif %}">
+                    <i class="fas fa-envelope mr-1"></i> Unread ({{ unread_count }})
+                </button>
+                <button onclick="filterNotifications('important')" 
+                        class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent hover:text-yellow-600 {% if active_tab == 'important' %}border-yellow-600 text-yellow-600{% endif %}">
+                    <i class="fas fa-star mr-1"></i> Important
+                </button>
+                <button onclick="filterNotifications('system')" 
+                        class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent hover:text-blue-600 {% if active_tab == 'system' %}border-blue-600 text-blue-600{% endif %}">
+                    <i class="fas fa-cog mr-1"></i> System
+                </button>
+            </div>
+        </div>
+
+        <!-- Notifications List -->
+        <div class="bg-white rounded-xl shadow-md overflow-hidden">
+            {% if notifications %}
+            <div class="divide-y divide-gray-200">
+                {% for notification in notifications %}
+                <div class="notification-item p-4 hover:bg-gray-50 transition-colors {% if not notification.read %}bg-blue-50{% endif %}" 
+                     data-type="{{ notification.type }}">
+                    <div class="flex items-start">
+                        <!-- Icon -->
+                        <div class="mr-3 mt-1">
+                            {% if notification.type == 'approval' %}
+                            <i class="fas fa-check-circle text-green-500 text-lg"></i>
+                            {% elif notification.type == 'denial' %}
+                            <i class="fas fa-times-circle text-red-500 text-lg"></i>
+                            {% elif notification.type == 'status_change' %}
+                            <i class="fas fa-sync-alt text-blue-500 text-lg"></i>
+                            {% elif notification.type == 'reminder' %}
+                            <i class="fas fa-clock text-yellow-500 text-lg"></i>
+                            {% elif notification.type == 'system' %}
+                            <i class="fas fa-cog text-purple-500 text-lg"></i>
+                            {% else %}
+                            <i class="fas fa-info-circle text-gray-500 text-lg"></i>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Content -->
+                        <div class="flex-1">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h4 class="font-medium text-gray-800">{{ notification.title }}</h4>
+                                    <p class="text-sm text-gray-600 mt-1">{{ notification.message }}</p>
+                                    
+                                    {% if notification.requisition_id %}
+                                    <div class="mt-2">
+                                        <span class="inline-block bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
+                                            <i class="fas fa-hashtag mr-1"></i>REQ-{{ notification.requisition_id }}
+                                        </span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="flex items-center space-x-2 ml-4">
+                                    <span class="text-xs text-gray-500 whitespace-nowrap">
+                                        <i class="far fa-clock mr-1"></i>
+                                        {{ notification.time }}
+                                    </span>
+                                    
+                                    {% if not notification.read %}
+                                    <button onclick="markAsRead('{{ notification.id }}')" 
+                                            class="text-blue-600 hover:text-blue-800 text-sm">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    {% endif %}
+                                    
+                                    {% if notification.important %}
+                                    <i class="fas fa-star text-yellow-500"></i>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <!-- Actions -->
+                            {% if notification.actions %}
+                            <div class="mt-3 flex space-x-2">
+                                {% for action in notification.actions %}
+                                <button onclick="{{ action.function }}" 
+                                        class="px-3 py-1 text-xs rounded border hover:bg-gray-100">
+                                    <i class="{{ action.icon }} mr-1"></i>{{ action.label }}
+                                </button>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-12">
+                <i class="fas fa-bell-slash text-4xl text-gray-300 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-700">No notifications</h3>
+                <p class="text-gray-500 mt-1">You're all caught up!</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Settings -->
+        <div class="bg-white rounded-xl shadow-md p-6 mt-6">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                <i class="fas fa-cog mr-2"></i>Notification Settings
+            </h3>
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="font-medium text-gray-700">Email Notifications</p>
+                        <p class="text-sm text-gray-500">Receive notifications via email</p>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="font-medium text-gray-700">Desktop Notifications</p>
+                        <p class="text-sm text-gray-500">Show browser notifications</p>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="font-medium text-gray-700">Sound Alerts</p>
+                        <p class="text-sm text-gray-500">Play sound for new notifications</p>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                
+                <div class="pt-4 border-t">
+                    <button onclick="clearAllNotifications()" 
+                            class="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 text-sm">
+                        <i class="fas fa-trash mr-1"></i> Clear All Notifications
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #9722be, #1e1e2d);
+            color: #fff;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 220px;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            padding: 30px 15px;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+        }
+
+        .sidebar h2 {
+            margin: 0 0 30px;
+            font-size: 22px;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .sidebar a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            text-decoration: none;
+            color: #fff;
+            border-radius: 8px;
+            transition: 0.3s;
+            font-weight: 500;
+        }
+
+        .sidebar a:hover, .sidebar a.active {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .sidebar a i { font-size: 16px; }
+
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            color: #000000;
+        }
+
+        /* Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+        }
+
+        input:checked + .slider {
+            background-color: #9722be;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .slider.round {
+            border-radius: 24px;
+        }
+
+        .slider.round:before {
+            border-radius: 50%;
+        }
+
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            .sidebar { width: 100%; flex-direction: row; overflow-x: auto; padding: 15px; }
+            .sidebar a { margin-bottom: 0; margin-right: 10px; white-space: nowrap; }
+            .main-content { padding: 15px; }
+        }
+    </style>
+
+    <script>
+        let activeTab = 'all';
+        
+        function filterNotifications(type) {
+            activeTab = type;
+            const items = document.querySelectorAll('.notification-item');
+            
+            items.forEach(item => {
+                const itemType = item.getAttribute('data-type');
+                
+                if (type === 'all') {
+                    item.style.display = '';
+                } else if (type === 'unread') {
+                    if (item.classList.contains('bg-blue-50')) {
+                        item.style.display = '';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                } else if (type === 'important') {
+                    // In real app, you would check for important flag
+                    if (Math.random() > 0.5) {
+                        item.style.display = '';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                } else if (type === 'system') {
+                    if (itemType === 'system') {
+                        item.style.display = '';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                }
+            });
+            
+            // Update active tab styling
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('border-purple-600', 'text-purple-600', 
+                                     'border-red-600', 'text-red-600',
+                                     'border-yellow-600', 'text-yellow-600',
+                                     'border-blue-600', 'text-blue-600');
+            });
+            
+            const activeBtn = document.querySelector(`[onclick="filterNotifications('${type}')"]`);
+            if (type === 'all') {
+                activeBtn.classList.add('border-purple-600', 'text-purple-600');
+            } else if (type === 'unread') {
+                activeBtn.classList.add('border-red-600', 'text-red-600');
+            } else if (type === 'important') {
+                activeBtn.classList.add('border-yellow-600', 'text-yellow-600');
+            } else if (type === 'system') {
+                activeBtn.classList.add('border-blue-600', 'text-blue-600');
+            }
+        }
+
+        function markAsRead(notificationId) {
+            // In real app, send AJAX request to mark as read
+            const item = document.querySelector(`[onclick="markAsRead('${notificationId}')"]`).closest('.notification-item');
+            item.classList.remove('bg-blue-50');
+            
+            // Update count
+            let unreadCount = parseInt('{{ unread_count }}') - 1;
+            if (unreadCount < 0) unreadCount = 0;
+            
+            document.querySelector('span.bg-red-500').textContent = unreadCount;
+            document.querySelector('h3.text-2xl').textContent = unreadCount;
+            
+            // Show success message
+            showToast('Notification marked as read', 'success');
+        }
+
+        function markAllAsRead() {
+            if (confirm('Mark all notifications as read?')) {
+                // In real app, send AJAX request
+                document.querySelectorAll('.notification-item').forEach(item => {
+                    item.classList.remove('bg-blue-50');
+                });
+                
+                document.querySelector('span.bg-red-500').textContent = '0';
+                document.querySelector('h3.text-2xl').textContent = '0';
+                
+                showToast('All notifications marked as read', 'success');
+            }
+        }
+
+        function clearAllNotifications() {
+            if (confirm('Clear all notifications? This cannot be undone.')) {
+                // In real app, send AJAX request
+                document.querySelector('.divide-y').innerHTML = `
+                    <div class="text-center py-12">
+                        <i class="fas fa-bell-slash text-4xl text-gray-300 mb-4"></i>
+                        <h3 class="text-lg font-medium text-gray-700">No notifications</h3>
+                        <p class="text-gray-500 mt-1">You're all caught up!</p>
+                    </div>
+                `;
+                
+                // Update counts
+                document.querySelector('span.bg-red-500').textContent = '0';
+                document.querySelectorAll('h3.text-2xl').forEach(h3 => {
+                    h3.textContent = '0';
+                });
+                
+                showToast('All notifications cleared', 'success');
+            }
+        }
+
+        function showToast(message, type) {
+            const toast = document.createElement('div');
+            toast.className = `fixed top-4 right-4 px-4 py-2 rounded-lg shadow-lg text-white z-50 ${
+                type === 'success' ? 'bg-green-500' : 'bg-red-500'
+            }`;
+            toast.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas fa-${type === 'success' ? 'check' : 'exclamation'} mr-2"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check for browser notification permission
+            if ("Notification" in window && Notification.permission === "default") {
+                setTimeout(() => {
+                    Notification.requestPermission();
+                }, 1000);
+            }
+        });
+    </script>
+</body>
+</html>

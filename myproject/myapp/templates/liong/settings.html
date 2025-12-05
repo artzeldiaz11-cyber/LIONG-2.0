@@ -1,0 +1,574 @@
+<!-- settings.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>LIONG | Settings</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>Employee Panel</h2>
+        <a href="{% url 'employeeDashboard' %}"><i class="fa-solid fa-gauge"></i> Dashboard</a>
+        <a href="{% url 'request' %}"><i class="fa-solid fa-cart-shopping"></i> Request Supplies</a>
+        <a href="{% url 'requestHistory' %}"><i class="fa-solid fa-clock-rotate-left"></i> Request History</a>
+        <a href="{% url 'notifications' %}"><i class="fa-solid fa-bell"></i> Notifications</a>
+        <a href="{% url 'settings' %}" class="active"><i class="fa-solid fa-gear"></i> Settings</a>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-800">
+                    <i class="fas fa-cogs text-purple-600 mr-2"></i>
+                    Settings
+                </h1>
+                <p class="text-gray-600 mt-1">Manage your account preferences and system settings</p>
+            </div>
+            <div class="text-sm text-gray-600 bg-white px-3 py-1 rounded-lg border">
+                <i class="fas fa-user mr-1"></i>
+                {{ current_user.name }}
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Left Column: Profile & Account -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Profile Settings -->
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">
+                        <i class="fas fa-user-circle mr-2"></i>Profile Information
+                    </h2>
+                    <form id="profileForm">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                                <input type="text" 
+                                       value="{{ current_user.name }}"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                                <input type="email" 
+                                       value="{{ current_user.email }}"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Contact Number</label>
+                                <input type="tel" 
+                                       placeholder="+63 912 345 6789"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Position</label>
+                                <input type="text" 
+                                       value="{{ employee.position|default:'Tailor' }}"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                            <input type="text" 
+                                   value="{{ employee.department|default:'Production' }}"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                        </div>
+                        
+                        <div class="flex justify-end">
+                            <button type="submit" 
+                                    class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                                <i class="fas fa-save mr-1"></i> Update Profile
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Password Change -->
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">
+                        <i class="fas fa-lock mr-2"></i>Change Password
+                    </h2>
+                    <form id="passwordForm">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+                                <div class="relative">
+                                    <input type="password" id="currentPassword"
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                                    <button type="button" onclick="togglePassword('currentPassword')" 
+                                            class="absolute right-3 top-2 text-gray-500">
+                                        <i class="far fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                                <div class="relative">
+                                    <input type="password" id="newPassword"
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                                    <button type="button" onclick="togglePassword('newPassword')" 
+                                            class="absolute right-3 top-2 text-gray-500">
+                                        <i class="far fa-eye"></i>
+                                    </button>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">Must be at least 8 characters with numbers and letters</p>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+                                <div class="relative">
+                                    <input type="password" id="confirmPassword"
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                                    <button type="button" onclick="togglePassword('confirmPassword')" 
+                                            class="absolute right-3 top-2 text-gray-500">
+                                        <i class="far fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="pt-2">
+                                <button type="submit" 
+                                        class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                                    <i class="fas fa-key mr-1"></i> Change Password
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Notification Preferences -->
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">
+                        <i class="fas fa-bell mr-2"></i>Notification Preferences
+                    </h2>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-medium text-gray-700">Request Status Updates</p>
+                                <p class="text-sm text-gray-500">Get notified when your requests are approved/denied</p>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" checked>
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                        
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-medium text-gray-700">Low Stock Alerts</p>
+                                <p class="text-sm text-gray-500">Receive alerts when frequently requested items are low</p>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" checked>
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                        
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-medium text-gray-700">System Announcements</p>
+                                <p class="text-sm text-gray-500">Important system updates and maintenance notices</p>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                        
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-medium text-gray-700">Weekly Report</p>
+                                <p class="text-sm text-gray-500">Receive weekly summary of your requests</p>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" checked>
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Quick Settings & Danger Zone -->
+            <div class="space-y-6">
+                <!-- Profile Picture -->
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">
+                        <i class="fas fa-camera mr-2"></i>Profile Picture
+                    </h2>
+                    <div class="text-center">
+                        <div class="relative inline-block mb-4">
+                            <div class="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden mx-auto">
+                                <i class="fas fa-user text-4xl text-gray-400"></i>
+                            </div>
+                            <button onclick="document.getElementById('uploadAvatar').click()"
+                                    class="absolute bottom-0 right-0 bg-purple-600 text-white p-2 rounded-full hover:bg-purple-700">
+                                <i class="fas fa-pencil-alt text-sm"></i>
+                            </button>
+                            <input type="file" id="uploadAvatar" class="hidden" accept="image/*">
+                        </div>
+                        <p class="text-sm text-gray-500 mb-4">JPG, PNG or GIF. Max size 2MB</p>
+                        <button onclick="removeAvatar()" 
+                                class="text-sm text-red-600 hover:text-red-800">
+                            <i class="fas fa-trash mr-1"></i> Remove Photo
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Theme Settings -->
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">
+                        <i class="fas fa-palette mr-2"></i>Theme
+                    </h2>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center">
+                                <div class="w-4 h-4 rounded-full bg-purple-600 mr-3"></div>
+                                <span>Default (Purple)</span>
+                            </div>
+                            <i class="fas fa-check text-purple-600"></i>
+                        </div>
+                        
+                        <div class="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center">
+                                <div class="w-4 h-4 rounded-full bg-blue-600 mr-3"></div>
+                                <span>Blue Theme</span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center">
+                                <div class="w-4 h-4 rounded-full bg-green-600 mr-3"></div>
+                                <span>Green Theme</span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center">
+                                <div class="w-4 h-4 rounded-full bg-gray-800 mr-3"></div>
+                                <span>Dark Mode</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Default Request Settings -->
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">
+                        <i class="fas fa-tools mr-2"></i>Default Request Settings
+                    </h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Default Department</label>
+                            <select class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                                <option>Production</option>
+                                <option>Quality Control</option>
+                                <option>Cutting</option>
+                                <option>Sewing</option>
+                                <option>Finishing</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Auto-save Drafts</label>
+                            <select class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                                <option>Every 5 minutes</option>
+                                <option>Every 10 minutes</option>
+                                <option>Every 30 minutes</option>
+                                <option>Never</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Danger Zone -->
+                <div class="bg-white rounded-xl shadow-md p-6 border border-red-200">
+                    <h2 class="text-lg font-semibold text-red-700 mb-4">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>Danger Zone
+                    </h2>
+                    <div class="space-y-3">
+                        <button onclick="exportMyData()"
+                                class="w-full text-left p-3 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700">
+                            <i class="fas fa-file-export mr-2"></i>
+                            Export My Data
+                        </button>
+                        
+                        <button onclick="clearMyHistory()"
+                                class="w-full text-left p-3 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700">
+                            <i class="fas fa-history mr-2"></i>
+                            Clear Request History
+                        </button>
+                        
+                        <button onclick="deactivateAccount()"
+                                class="w-full text-left p-3 border border-red-300 rounded-lg hover:bg-red-50 text-red-700">
+                            <i class="fas fa-user-slash mr-2"></i>
+                            Deactivate Account
+                        </button>
+                    </div>
+                </div>
+
+                <!-- System Info -->
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">
+                        <i class="fas fa-info-circle mr-2"></i>System Information
+                    </h2>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">LIONG Garments System</span>
+                            <span class="font-medium">v2.1.4</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Last Login</span>
+                            <span class="font-medium">{{ last_login|default:"Just now" }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Account Created</span>
+                            <span class="font-medium">{{ employee.date_joined|default:"2024-01-15" }}</span>
+                        </div>
+                        <div class="pt-3 border-t">
+                            <a href="#" class="text-purple-600 hover:text-purple-800">
+                                <i class="fas fa-question-circle mr-1"></i> Help & Support
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #9722be, #1e1e2d);
+            color: #fff;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 220px;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            padding: 30px 15px;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+        }
+
+        .sidebar h2 {
+            margin: 0 0 30px;
+            font-size: 22px;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .sidebar a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            text-decoration: none;
+            color: #fff;
+            border-radius: 8px;
+            transition: 0.3s;
+            font-weight: 500;
+        }
+
+        .sidebar a:hover, .sidebar a.active {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .sidebar a i { font-size: 16px; }
+
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            color: #000000;
+        }
+
+        /* Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+        }
+
+        input:checked + .slider {
+            background-color: #9722be;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .slider.round {
+            border-radius: 24px;
+        }
+
+        .slider.round:before {
+            border-radius: 50%;
+        }
+
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            .sidebar { width: 100%; flex-direction: row; overflow-x: auto; padding: 15px; }
+            .sidebar a { margin-bottom: 0; margin-right: 10px; white-space: nowrap; }
+            .main-content { padding: 15px; }
+        }
+    </style>
+
+    <script>
+        function togglePassword(inputId) {
+            const input = document.getElementById(inputId);
+            const button = input.nextElementSibling;
+            const icon = button.querySelector('i');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+
+        document.getElementById('profileForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            showToast('Profile updated successfully', 'success');
+        });
+
+        document.getElementById('passwordForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const newPass = document.getElementById('newPassword').value;
+            const confirmPass = document.getElementById('confirmPassword').value;
+            
+            if (newPass !== confirmPass) {
+                showToast('Passwords do not match', 'error');
+                return;
+            }
+            
+            if (newPass.length < 8) {
+                showToast('Password must be at least 8 characters', 'error');
+                return;
+            }
+            
+            showToast('Password changed successfully', 'success');
+            this.reset();
+        });
+
+        function exportMyData() {
+            if (confirm('Export all your data? This may take a moment.')) {
+                showToast('Data export started. You will receive an email shortly.', 'success');
+            }
+        }
+
+        function clearMyHistory() {
+            if (confirm('Clear all your request history? This cannot be undone.')) {
+                showToast('History cleared successfully', 'success');
+            }
+        }
+
+        function deactivateAccount() {
+            if (confirm('Are you sure you want to deactivate your account? You can reactivate by contacting admin.')) {
+                showToast('Account deactivation request sent to administrator', 'success');
+            }
+        }
+
+        function removeAvatar() {
+            if (confirm('Remove profile picture?')) {
+                showToast('Profile picture removed', 'success');
+            }
+        }
+
+        function showToast(message, type) {
+            const toast = document.createElement('div');
+            toast.className = `fixed top-4 right-4 px-4 py-2 rounded-lg shadow-lg text-white z-50 ${
+                type === 'success' ? 'bg-green-500' : 'bg-red-500'
+            }`;
+            toast.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas fa-${type === 'success' ? 'check' : 'exclamation'} mr-2"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // Theme selection
+        document.querySelectorAll('.bg-white .space-y-3 > div').forEach(themeOption => {
+            themeOption.addEventListener('click', function() {
+                // Remove check from all
+                this.parentElement.querySelectorAll('i.fa-check').forEach(icon => {
+                    icon.classList.remove('text-purple-600', 'text-blue-600', 'text-green-600', 'text-gray-800');
+                });
+                
+                // Add check to selected
+                const checkIcon = this.querySelector('i.fa-check');
+                const colorDiv = this.querySelector('div > div');
+                const color = window.getComputedStyle(colorDiv).backgroundColor;
+                
+                if (color === 'rgb(147, 51, 234)') { // purple
+                    checkIcon.classList.add('text-purple-600');
+                } else if (color === 'rgb(37, 99, 235)') { // blue
+                    checkIcon.classList.add('text-blue-600');
+                } else if (color === 'rgb(34, 197, 94)') { // green
+                    checkIcon.classList.add('text-green-600');
+                } else if (color === 'rgb(31, 41, 55)') { // dark gray
+                    checkIcon.classList.add('text-gray-800');
+                }
+                
+                showToast('Theme updated. Refresh page to see changes.', 'success');
+            });
+        });
+    </script>
+</body>
+</html>
