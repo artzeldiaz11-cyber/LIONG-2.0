@@ -29,4 +29,11 @@ urlpatterns = [
     path('inventory-partial-approve/<int:requisition_id>/', views.inventory_partial_approve, name='inventory_partial_approve'),
     path('inventory-fulfill-stock/<int:requisition_id>/', views.inventory_fulfill_from_stock, name='inventory_fulfill_stock'),
     path('inventory-requisition/view/<int:req_id>/', views.inventory_requisition_view, name="inventory_requisition_view"),
+
+    # Employee Panel URLs
+    path('employeeDashboard/', views.employeeDashboard, name='employeeDashboard'),
+    path('request/', views.request, name='request'),
+    path('requestHistory/', views.requestHistory, name='requestHistory'),
+    path('notifications/', views.notifications, name='notifications'),
+    path('settings/', views.settings, name='settings'),
 ]
